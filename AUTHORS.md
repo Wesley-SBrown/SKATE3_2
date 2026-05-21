@@ -12,6 +12,6 @@ SKATE was originally developed by Retrievertech under DOE DESC0008219 by:
 
 The code and its community are currently being developed and maintained by the [BP/SD](https://studieddigitally.org/) project under NSF 2410335:
 
-* Félix Morales, Northwestern University, USA
+* Felix Morales, Northwestern University, USA
 * Brian Kim, Northwestern University, USA
 * Lorraiine Hwang, University of Califonia Davis, USA
