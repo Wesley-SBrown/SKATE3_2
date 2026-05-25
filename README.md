@@ -81,7 +81,7 @@ seismogram-get-all-metadata --image input.png --output output_dir --scale 0.25
 
 ```bash
 # Detect region of interest
-seismogram-get-roi --image input.png --output roi.json --scale 0.24
+seismogram-get-roi --image input.png --output roi.json --scale 0.25
 
 # Detect meanlines
 seismogram-get-meanlines --image input.png --roi roi.json --output meanlines.json
