@@ -5,126 +5,150 @@ Created on Mon Dec  8 11:21:14 2014
 @author: benamy
 """
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # Note: unused
 from matplotlib.pyplot import scatter
-from scipy.interpolate import LSQUnivariateSpline
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import LSQUnivariateSpline # NOTE: unsused
+from scipy.interpolate import UnivariateSpline # NOTE: unused
 from math import sqrt
 from .segment import region
 
-class intersection:
-  pass
 
-class node:
-  node_type = '' # intersection or dead end
-  location = (0,0)
-  radius = 0
-  degree = 0
-  segment_IDs = []
-
-  def connect_segment(self, seg):
-    self.segment_IDs.append(seg.ID)
-    self.segment_IDs.sort()
-    self.degree = self.degree + 1
-
-  def get_segments(self):
-    return segment_IDs
-
-class pixel_path:
-  ID = 0
-  pixel_path = []
-  end1 = (0,0)
-  end2 = (0,0)
-  end1_type = ''
-  end2_type = ''
-  length = 0
-  displacement = 0
-  path_domain = (0,0)   # min and max column values
-  path_range = (0,0)  # min and max row values
-
-  def __init__(self, pixels, ID):
-    if len(pixels) > 0:
-      self.pixel_path = pixels
-      self.ID = ID
-      self.calc_properties()
-
-  def calc_properties(self):
-    self.length = len(self.pixel_path)
-    self.end1 = self.pixel_path[0]
-    self.end2 = self.pixel_path[-1]
-    self.displacement = sqrt((self.end1[0] - self.end2[0])**2 +
-                 (self.end1[1] - self.end2[1])**2)
-    self.path_domain[0] = min(self.pixel_path, key=lambda x: x[1])
-    self.path_domain[1] = max(self.pixel_path, key=lambda x: x[1])
-    self.path_range[0] = min(self.pixel_path, key=lambda x: x[0])
-    self.path_range[1] = max(self.pixel_path, key=lambda x: x[0])
+class Intersection:
+    """
+    WIP class for handling intersections
+    Possibly incorporating the following modules:
+    - intersection_detection.py
+    - line_intersection.py
+        
+    """
+    
+   
+    pass
 
 
-  def extend_path(self, pixels):
-    '''Input should be a list of tuples representing pixels.
-    '''
-    self.pixel_path = self.pixel_path + pixels
-    self.calc_properties()
+class Node:
 
-  def binary_image(self, dims):
-    img = np.zeros(dims, dtype=bool)
-    for p in self.pixel_path:
-      img[p[0], p[1]] = True
-    return img
+    def __init__(self, node_type='', location=(0,0), radius=0):
+        self.node_type = node_type  # marks intersection or dead end
+        self.location = location
+        radius = radius
+        self.degree = 0
+        self.segment_IDs = []
 
-class pixel_series:
-  coords = np.array([], dtype=int, ndmin=2)
-  ID = 0
-  series_domain = np.array([0,0], dtype=int)
-  series_range = np.array([0,0], dtype=int)
-  length = 0
-  end1_linear_fit = np.array([0,0])
-  end2_linear_fit = np.array([0,0])
-  end1_quadratic_fit = np.array([0,0,0])
-  end2_quadratic_fit = np.array([0,0,0])
+    def connect_segment(self, seg):
+        self.segment_IDs.append(seg.ID)
+        self.segment_IDs.sort()
+        self.degree = self.degree + 1
 
-  END_LENGTH = 6
+    def get_segments(self):
+        return self.segment_IDs
 
-  def __init__(self, pixels, ID):
-    if len(pixels) > 0:
-      self.pixel_series = pixels
-      self.ID = ID
-      self.calc_properties()
 
-  def calc_properties(self):
-    self.length = self.coords.shape[0]
-    self.series_domain[0] = np.amin(self.coords[:,1])
-    self.series_domain[1] = np.amax(self.coords[:,1])
-    self.series_range[0] = np.amin(self.coords[:,0])
-    self.series_range[1] = np.amax(self.coords[:,0])
+class PixelPath:
 
-  def get_segment(self, col1, col2):
-    i1 = col1 - self.series_domain[0]
-    i2 = col2 - self.series_domain[0]
-    if i1 >= 0 and i2 < self.length:
-      return self.coords[i1:i2,:]
-    else:
-      return
+    def __init__(self, pixels=None, ID=0):
+        if len(pixels) > 0:
+            self.pixel_path = pixels if pixels is not None else []
+            self.ID = ID
+            self.calc_properties()
+            self.end1 = (0,0)
+            self.end2 = (0,0)
+            self.end1_type = ""
+            self.end2_type = ""
+            self.length = 0
+            self.displacement = 0
+            self.path_domain = (0, 0)  # min and max column values
+            self.path_range = (0, 0)  # min and max row values
 
-  def get_linear_fits(self):
-    if self.length >= END_LENGTH:
-      end = self.get_segment(self.series_domain[0],
-                   self.series_domain[0] + END_LENGTH - 1)
-      self.end1_linear_fit = linear_fit(end)
-      end = self.get_segment(self.series_domain[1] - END_LENGTH + 1,
-                   self.series_domain[1])
-      self.end2_linear_fit = linear_fit(end)
+    def calc_properties(self):
+        self.length = len(self.pixel_path)
+        self.end1 = self.pixel_path[0]
+        self.end2 = self.pixel_path[-1]
+        self.displacement = sqrt(
+            (self.end1[0] - self.end2[0]) ** 2 + (self.end1[1] - self.end2[1]) ** 2
+        )
+        self.path_domain[0] = min(self.pixel_path, key=lambda x: x[1])
+        self.path_domain[1] = max(self.pixel_path, key=lambda x: x[1])
+        self.path_range[0] = min(self.pixel_path, key=lambda x: x[0])
+        self.path_range[1] = max(self.pixel_path, key=lambda x: x[0])
 
-  def get_quadratic_fits(self):
-    if self.length >= END_LENGTH:
-      end = self.get_segment(self.series_domain[0],
-                   self.series_domain[0] + END_LENGTH - 1)
-      self.end1_quadratic_fit = quadratic_fit(end)
-      end = self.get_segment(self.series_domain[1] - END_LENGTH + 1,
-                   self.series_domain[1])
-      self.end2_quadratic_fit = quadratic_fit(end)
+    def extend_path(self, pixels):
+        """Input should be a list of tuples representing pixels."""
+        self.pixel_path = self.pixel_path + pixels
+        self.calc_properties()
 
-'''
+    def binary_image(self, dims):
+        img = np.zeros(dims, dtype=bool)
+        for p in self.pixel_path:
+            img[p[0], p[1]] = True
+        return img
+
+
+class PixelSeries:
+    END_LENGTH = 6
+
+    def __init__(self, pixels=None, ID=0):
+        if len(pixels) > 0:
+            self.ID = ID
+            self.pixel_series = pixels if pixels is not None else []
+            self.coords = np.array([], dtype=int, ndmin=2)
+            
+            self.series_domain = np.array([0, 0], dtype=int)
+            self.series_range = np.array([0, 0], dtype=int)
+            self.length = 0
+
+            self.end1_linear_fit = np.array([0, 0])
+            self.end2_linear_fit = np.array([0, 0])
+            self.end1_quadratic_fit = np.array([0, 0, 0])
+            self.end2_quadratic_fit = np.array([0, 0, 0])
+
+            if self.coords.shape[0] > 0:
+                self.calc_properties()
+
+    def linear_fit():
+        # TODO: define functionality
+        return
+
+    def calc_properties(self):
+        self.length = self.coords.shape[0]
+        self.series_domain[0] = np.amin(self.coords[:, 1])
+        self.series_domain[1] = np.amax(self.coords[:, 1])
+        self.series_range[0] = np.amin(self.coords[:, 0])
+        self.series_range[1] = np.amax(self.coords[:, 0])
+
+    def get_segment(self, col1, col2):
+        i1 = col1 - self.series_domain[0]
+        i2 = col2 - self.series_domain[0]
+        if i1 >= 0 and i2 < self.length:
+            return self.coords[i1:i2, :]
+        else:
+            return
+
+    def get_linear_fits(self):
+        if self.length >= self.END_LENGTH:
+            end = self.get_segment(
+                self.series_domain[0], self.series_domain[0] + self.END_LENGTH - 1
+            )
+            self.end1_linear_fit = self.linear_fit(end)
+            end = self.get_segment(
+                self.series_domain[1] - self.END_LENGTH + 1, self.series_domain[1]
+            )
+            self.end2_linear_fit = self.linear_fit(end)
+
+    def get_quadratic_fits(self):
+        if self.length >= self.END_LENGTH:
+            end = self.get_segment(
+                self.series_domain[0], self.series_domain[0] + self.END_LENGTH - 1
+            )
+            self.end1_quadratic_fit = self.quadratic_fit(end)
+            end = self.get_segment(
+                self.series_domain[1] - self.END_LENGTH + 1, self.series_domain[1]
+            )
+            self.end2_quadratic_fit = self.quadratic_fit(end)
+
+# TODO: determine whether to remove following commented out code
+
+"""
 class center_line:
 
   def __init__(self, spline, domain):
@@ -132,9 +156,9 @@ class center_line:
     self.domain = domain
     self.x = np.arange(self.domain[0], self.domain[1]+1)
     self.y = self.spline(self.x)
-'''
+"""
 
-'''
+"""
   # def all_pixels(self):
 
   def pixels(self, x):
@@ -164,8 +188,8 @@ class center_line:
     div_size = 1 / num_divs
     divs = np.arange((x - 0.5 + (div_size / 2)), (x + 0.5), div_size)
     y = self.spline(divs)
-'''
-'''
+"""
+"""
   Got lazy. The function below was the beginning of a more complicated method
 
   def pixels(self, x):
@@ -176,10 +200,10 @@ class center_line:
     y = self.spline(divs)
     y_u = np.ceil(y)
     y_d = np.floor(y)
-'''
+"""
 
 
-'''
+"""
 def vertical_ridge_line_to_series(coords):
   if coords.size == 0:
     return np.array([[0,0]])
@@ -195,8 +219,8 @@ def vertical_ridge_line_to_series(coords):
       series.append(np.array([y, x]))
   series = np.asarray(series)
   return series
-'''
-'''
+"""
+"""
 # version using LSQUnivariateSpline and specifying points_per_knot
 def series_to_center_line(series, points_per_knot = 5):
   domain = (min(series[:,1]), max(series[:,1]))
@@ -212,9 +236,9 @@ def series_to_center_line(series, points_per_knot = 5):
   x = np.arange(domain[0], domain[1]+1)
   y = fit(x)
   return np.hstack((y[:, np.newaxis], x[:, np.newaxis]))
-'''
+"""
 
-'''
+"""
 def series_to_center_line(series, smoothing_param=(1/(2*0.8))):
   domain = (min(series[:,1]), max(series[:,1]))
   if series[:,0].size > 8:
@@ -225,15 +249,19 @@ def series_to_center_line(series, smoothing_param=(1/(2*0.8))):
                bbox=domain, k=order)
   cl = center_line(fit, domain)
   return cl
-'''
-class intersection(region):
-  pass
+"""
 
 
+class Intersection(region):
+    # XXX: potential duplicate class definition?
+    pass
 
-class timing_mark(region):
-  pass
+
+class TimingMark(region):
+    # TODO: implement class functionality
+    pass
 
 
-class gap(region):
-  pass
+class Gap(region):
+    # TODO: implement class functionality
+    pass

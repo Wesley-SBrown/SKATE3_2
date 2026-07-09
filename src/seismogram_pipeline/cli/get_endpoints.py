@@ -15,9 +15,27 @@ Options:
 
 from docopt import docopt
 
+
 def get_endpoints(segments_file, out_file):
-  from ..core.geojson_io import get_features
-  from ..core.endpoints import get_endpoint_data, generate_geojson, write_geojson, write_csv
+    """
+    Processes the segments file to extract and write endpoints
+    """
+    from ..core.geojson_io import get_features
+    from ..core.endpoints import (
+        get_endpoint_data,
+        generate_geojson,
+        write_geojson,
+        write_csv,
+    )
+
+    features = get_features(filename=segments_file)
+    data = get_endpoint_data(features=features)
+    
+    if out_file is not None:
+        write_geojson(out_file, generate_geojson(data))
+    else:
+        write_csv(out_file, data)
+
 
 def main():
     """Main entry point for the get_endpoints CLI."""
@@ -25,13 +43,11 @@ def main():
     segments_file = arguments["--segments"]
     out_file = arguments["--output"]
 
-    features = get_features(segments_file)
-    data = get_endpoint_data(features)
-
-    if out_file is not None:
-        write_geojson(out_file, generate_geojson(data))
+    if segments_file:
+        get_endpoints(segments_file=segments_file, out_file=out_file)
     else:
-        write_csv(out_file, data)
+        print(arguments)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

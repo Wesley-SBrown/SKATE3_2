@@ -16,27 +16,30 @@ Options:
 
 from docopt import docopt
 
+
 def get_thresholded_image(in_file, out_file, debug_dir=False):
-  if debug_dir:
-    from ..core.dir import ensure_dir_exists
-    ensure_dir_exists(debug_dir)
+    if debug_dir:
+        from ..core.dir import ensure_dir_exists
 
-  from ..core.timer import timeStart, timeEnd
-  from ..core.otsu_threshold_image import otsu_threshold_image
-  from ..core.load_image import get_image
-  from scipy import misc
+        ensure_dir_exists(debug_dir)
 
-  timeStart("read image")
-  grayscale_image = get_image(in_file)
-  timeEnd("read image")
+    from ..core.timer import timeStart, timeEnd
+    from ..core.otsu_threshold_image import otsu_threshold_image
+    from ..core.load_image import get_image
+    from scipy import misc
 
-  timeStart("threshold image")
-  thresholded_image = otsu_threshold_image(grayscale_image)
-  timeEnd("threshold image")
+    timeStart("read image")
+    grayscale_image = get_image(in_file)
+    timeEnd("read image")
 
-  timeStart("save image")
-  misc.imsave(out_file, thresholded_image)
-  timeEnd("save image")
+    timeStart("threshold image")
+    thresholded_image = otsu_threshold_image(grayscale_image)
+    timeEnd("threshold image")
+
+    timeStart("save image")
+    misc.imsave(out_file, thresholded_image)
+    timeEnd("save image")
+
 
 def main():
     """Main entry point for the get_thresholded_image CLI."""
@@ -50,5 +53,6 @@ def main():
     else:
         print(arguments)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

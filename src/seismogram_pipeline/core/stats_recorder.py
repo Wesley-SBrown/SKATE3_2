@@ -1,34 +1,36 @@
 import json
 
+
 class Record:
-  active = False
-  stats = {}
+    active = False
+    stats = {}
 
-  @classmethod
-  def activate(cls):
-    cls.active = True
+    @classmethod
+    def activate(cls):
+        cls.active = True
 
-  @classmethod
-  def record(cls, key, value):
-    cls.stats[key] = value
+    @classmethod
+    def record(cls, key, value):
+        cls.stats[key] = value
 
-  @classmethod
-  def export_as_json(cls, filename):
-    try:
-      with open(filename, "r+") as myfile:
-        data = myfile.read()
-        prev_stats = json.loads(data)
-    except IOError:
-      # no previous stats recorded, so
-      # initialize an empty dict of stats
-      prev_stats = {key: [] for key in cls.stats}
+    @classmethod
+    def export_as_json(cls, filename):
+        try:
+            with open(filename, "r+") as myfile:
+                data = myfile.read()
+                prev_stats = json.loads(data)
+        except IOError:
+            # no previous stats recorded, so
+            # initialize an empty dict of stats
+            prev_stats = {key: [] for key in cls.stats}
 
-    # append all the new stats to the old stats
-    for key, record in cls.stats.items():
-      try:
-        prev_stats[key].append(record)
-      except KeyError:
-        print("WARN: Failed to save a new statistic, %s, to an existing record" % key)
+        # append all the new stats to the old stats
+        for key, record in cls.stats.items():
+            try:
+                prev_stats[key].append(record)
+            except KeyError:
+                print(
+                    f"WARN: Failed to save a new statistic, {key}, to an existing record")
 
-    with open(filename, "w") as myfile:
-      json.dump(prev_stats, myfile)
+        with open(filename, "w") as myfile:
+            json.dump(prev_stats, myfile)

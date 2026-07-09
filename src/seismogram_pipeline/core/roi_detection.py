@@ -19,150 +19,201 @@ from .otsu_threshold_image import otsu_threshold_image
 import matplotlib.pyplot as plt
 import geojson
 
-PARAMS = {
-  "trace-width": lambda scale: int(17*scale)
-}
+PARAMS = {"trace-width": lambda scale: int(17 * scale)} # TODO: recompile so that uses config.yaml
+
 
 def get_boundary(grayscale_image, scale=1):
-  timeStart("threshold image")
-  black_and_white_image = otsu_threshold_image(grayscale_image)
-  timeEnd("threshold image")
+    timeStart("threshold image")
+    black_and_white_image = otsu_threshold_image(grayscale_image)
+    timeEnd("threshold image")
 
-  Debug.save_image("roi", "black_and_white_image", black_and_white_image)
+    Debug.save_image("roi", "black_and_white_image", black_and_white_image)
 
-  timeStart("morphological open image")
-  filter_element_opening = disk(PARAMS["trace-width"](scale))
-  opened_image = cv2.morphologyEx(255*black_and_white_image.astype(np.uint8), cv2.MORPH_OPEN, filter_element_opening)
-  timeEnd("morphological open image")
+    timeStart("morphological open image")
+    filter_element_opening = disk(PARAMS["trace-width"](scale))
+    opened_image = cv2.morphologyEx(
+        255 * black_and_white_image.astype(np.uint8),
+        cv2.MORPH_OPEN,
+        filter_element_opening,
+    )
+    timeEnd("morphological open image")
 
-  Debug.save_image("roi", "opened_image", opened_image)
+    Debug.save_image("roi", "opened_image", opened_image)
 
-  timeStart("invert image")
-  opened_image = np.invert(opened_image)
-  timeEnd("invert image")
+    timeStart("invert image")
+    opened_image = np.invert(opened_image)
+    timeEnd("invert image")
 
-  timeStart("segment image into connected regions")
-  labeled_components, num_components = label(opened_image)
-  timeEnd("segment image into connected regions")
+    timeStart("segment image into connected regions")
+    labeled_components, num_components = label(opened_image)
+    timeEnd("segment image into connected regions")
 
-  timeStart("calculate region areas")
-  # Have to cast to np.intp with ndarray.astype because of a numpy bug
-  # see: https://github.com/numpy/numpy/pull/4366
-  areas = np.bincount(labeled_components.flatten().astype(np.intp))[1:]
-  timeEnd("calculate region areas")
+    timeStart("calculate region areas")
+    # Have to cast to np.intp with ndarray.astype because of a numpy bug
+    # see: https://github.com/numpy/numpy/pull/4366
+    areas = np.bincount(labeled_components.flatten().astype(np.intp))[1:]
+    timeEnd("calculate region areas")
 
-  timeStart("calculate region boundaries")
-  image_boundaries = find_boundaries(labeled_components, connectivity=1, mode="inner", background=0)
-  timeEnd("calculate region boundaries")
+    timeStart("calculate region boundaries")
+    image_boundaries = find_boundaries(
+        labeled_components, connectivity=1, mode="inner", background=0
+    )
+    timeEnd("calculate region boundaries")
 
-  Debug.save_image("roi", "image_boundaries", image_boundaries)
+    Debug.save_image("roi", "image_boundaries", image_boundaries)
 
-  timeStart("mask region of interest")
-  largest_component_id = np.argmax(areas) + 1
-  region_of_interest_mask = (labeled_components != largest_component_id)
-  region_of_interest_boundary = np.copy(image_boundaries)
-  region_of_interest_boundary[region_of_interest_mask] = 0
-  timeEnd("mask region of interest")
-  
-  Debug.save_image("roi", "region_of_interest_boundary", region_of_interest_boundary)
+    timeStart("mask region of interest")
+    largest_component_id = np.argmax(areas) + 1
+    region_of_interest_mask = labeled_components != largest_component_id
+    region_of_interest_boundary = np.copy(image_boundaries)
+    region_of_interest_boundary[region_of_interest_mask] = 0
+    timeEnd("mask region of interest")
 
-  return region_of_interest_boundary
+    Debug.save_image("roi", "region_of_interest_boundary", region_of_interest_boundary)
+
+    return region_of_interest_boundary
+
 
 def get_hough_lines(image, min_angle, max_angle):
-  min_separation_distance = 5
-  min_separation_angle = 5
-  return get_best_hough_lines(image, min_angle, max_angle, min_separation_distance, min_separation_angle)
+    min_separation_distance = 5
+    min_separation_angle = 5
+    return get_best_hough_lines(
+        image, min_angle, max_angle, min_separation_distance, min_separation_angle
+    )
 
-def get_box_lines(boundary, image = None):
-  height, width = boundary.shape
-  [half_width, half_height] = np.floor([0.5 * width, 0.5 * height]).astype(int)
 
-  timeStart("split image")
-  image_regions = {
-    "left": boundary[0 : height, 0 : half_width],
-    "right": boundary[0 : height, half_width : width],
-    "top": boundary[0 : half_height, 0 : width],
-    "bottom": boundary[half_height : height, 0 : width]
-  }
-  timeEnd("split image")
+def get_box_lines(boundary, image=None):
+    height, width = boundary.shape
+    [half_width, half_height] = np.floor([0.5 * width, 0.5 * height]).astype(int)
 
-  timeStart("get hough lines")
-  hough_lines = {
-    "left": np.array(get_hough_lines(image_regions["left"], min_angle = -10, max_angle = 10)),
-    "right": np.array(get_hough_lines(image_regions["right"], min_angle = -10, max_angle = 10)),
-    "top": np.array(get_hough_lines(image_regions["top"], min_angle = -120, max_angle = -70)),
-    "bottom": np.array(get_hough_lines(image_regions["bottom"], min_angle = -120, max_angle = -70))
-  }
-  timeEnd("get hough lines")
+    timeStart("split image")
+    image_regions = {
+        "left": boundary[0:height, 0:half_width],
+        "right": boundary[0:height, half_width:width],
+        "top": boundary[0:half_height, 0:width],
+        "bottom": boundary[half_height:height, 0:width],
+    }
+    timeEnd("split image")
 
-  hough_lines["bottom"] += [0, half_height]
-  hough_lines["right"] += [half_width, 0]
+    timeStart("get hough lines")
+    hough_lines = {
+        "left": np.array(
+            get_hough_lines(image_regions["left"], min_angle=-10, max_angle=10)
+        ),
+        "right": np.array(
+            get_hough_lines(image_regions["right"], min_angle=-10, max_angle=10)
+        ),
+        "top": np.array(
+            get_hough_lines(image_regions["top"], min_angle=-120, max_angle=-70)
+        ),
+        "bottom": np.array(
+            get_hough_lines(image_regions["bottom"], min_angle=-120, max_angle=-70)
+        ),
+    }
+    timeEnd("get hough lines")
 
-  print("found these hough lines:")
-  print(hough_lines)
+    hough_lines["bottom"] += [0, half_height]
+    hough_lines["right"] += [half_width, 0]
 
-  if Debug.active:
-    image = gray2rgb(boundary)
-    line_coords = [ skidraw.line(line[0][1], line[0][0], line[1][1], line[1][0]) for line in hough_lines.values() ]
-    for line in line_coords:
-      rr, cc = line
-      mask = (rr >= 0) & (rr < image.shape[0]) & (cc >= 0) & (cc < image.shape[1])
-      image[rr[mask], cc[mask]] = [255, 0, 0]
-    Debug.save_image("roi", "hough_lines", image)
+    print("found these hough lines:")
+    print(hough_lines)
 
-  return hough_lines
+    if Debug.active:
+        image = gray2rgb(boundary)
+        line_coords = [
+            skidraw.line(line[0][1], line[0][0], line[1][1], line[1][0])
+            for line in hough_lines.values()
+        ]
+        for line in line_coords:
+            rr, cc = line
+            mask = (rr >= 0) & (rr < image.shape[0]) & (cc >= 0) & (cc < image.shape[1])
+            image[rr[mask], cc[mask]] = [255, 0, 0]
+        Debug.save_image("roi", "hough_lines", image)
 
-def get_corners(lines, image = None):
-  timeStart("find intersections")
-  corners = {
-    "top_left": seg_intersect(lines["top"], lines["left"]),
-    "top_right": seg_intersect(lines["top"], lines["right"]),
-    "bottom_left": seg_intersect(lines["bottom"], lines["left"]),
-    "bottom_right": seg_intersect(lines["bottom"], lines["right"])
-  }
+    return hough_lines
 
-  # turn corners into tuples of the form (x, y), where x and y are integers
-  corners = { corner_name: tuple(coord.astype(int)) for corner_name, coord in corners.items() }
-  timeEnd("find intersections")
 
-  if Debug.active:
-    image_copy = np.copy(image)
-    inner_circles = { corner_name: skidraw.circle(corner[1], corner[0], 10, shape=image.shape) for corner_name, corner in corners.items() }
-    outer_circles = { corner_name: skidraw.circle(corner[1], corner[0], 50, shape=image.shape) for corner_name, corner in corners.items() }
-    for corner_name in inner_circles:
-      image_copy[outer_circles[corner_name]] = 0.0
-      image_copy[inner_circles[corner_name]] = 1.0
-    Debug.save_image("roi", "roi_corners", image_copy)
+def get_corners(lines, image=None):
+    timeStart("find intersections")
+    corners = {
+        "top_left": seg_intersect(lines["top"], lines["left"]),
+        "top_right": seg_intersect(lines["top"], lines["right"]),
+        "bottom_left": seg_intersect(lines["bottom"], lines["left"]),
+        "bottom_right": seg_intersect(lines["bottom"], lines["right"]),
+    }
 
-  if Record.active:
-    from lib.utilities import poly_area2D
-    from lib.quality_control import points_to_rho_theta
+    # turn corners into tuples of the form (x, y), where x and y are integers
+    corners = {
+        corner_name: tuple(coord.astype(int)) for corner_name, coord in corners.items()
+    }
+    timeEnd("find intersections")
 
-    corners_clockwise = [
-      corners["top_left"], corners["top_right"],
-      corners["bottom_right"], corners["bottom_left"]
-    ]
-    roi_area = poly_area2D(corners_clockwise)
-    _, roi_angle_top = points_to_rho_theta(corners["top_left"], corners["top_right"])
-    _, roi_angle_bottom = points_to_rho_theta(corners["bottom_right"], corners["bottom_left"])
-    _, roi_angle_left = points_to_rho_theta(corners["top_left"], corners["bottom_left"])
-    _, roi_angle_right = points_to_rho_theta(corners["bottom_right"], corners["top_right"])
+    if Debug.active:
+        image_copy = np.copy(image)
+        inner_circles = {
+            corner_name: skidraw.circle(corner[1], corner[0], 10, shape=image.shape)
+            for corner_name, corner in corners.items()
+        }
+        outer_circles = {
+            corner_name: skidraw.circle(corner[1], corner[0], 50, shape=image.shape)
+            for corner_name, corner in corners.items()
+        }
+        for corner_name in inner_circles:
+            image_copy[outer_circles[corner_name]] = 0.0
+            image_copy[inner_circles[corner_name]] = 1.0
+        Debug.save_image("roi", "roi_corners", image_copy)
 
-    Record.record("roi_area", roi_area)
-    Record.record("roi_angle_top", float("%.4f" % roi_angle_top))
-    Record.record("roi_angle_bottom", float("%.4f" % roi_angle_bottom))
-    Record.record("roi_angle_left", float("%.4f" % roi_angle_left))
-    Record.record("roi_angle_right", float("%.4f" % roi_angle_right))
+    if Record.active:
+        from lib.utilities import poly_area2D
+        from lib.quality_control import points_to_rho_theta
 
-  return corners
+        corners_clockwise = [
+            corners["top_left"],
+            corners["top_right"],
+            corners["bottom_right"],
+            corners["bottom_left"],
+        ]
+        roi_area = poly_area2D(corners_clockwise)
+        _, roi_angle_top = points_to_rho_theta(
+            corners["top_left"], corners["top_right"]
+        )
+        _, roi_angle_bottom = points_to_rho_theta(
+            corners["bottom_right"], corners["bottom_left"]
+        )
+        _, roi_angle_left = points_to_rho_theta(
+            corners["top_left"], corners["bottom_left"]
+        )
+        _, roi_angle_right = points_to_rho_theta(
+            corners["bottom_right"], corners["top_right"]
+        )
+
+        Record.record("roi_area", roi_area)
+        Record.record("roi_angle_top", float("%.4f" % roi_angle_top))
+        Record.record("roi_angle_bottom", float("%.4f" % roi_angle_bottom))
+        Record.record("roi_angle_left", float("%.4f" % roi_angle_left))
+        Record.record("roi_angle_right", float("%.4f" % roi_angle_right))
+
+    return corners
+
 
 def get_roi(image, scale):
-  boundary = get_boundary(image, scale=scale)
-  lines = get_box_lines(boundary, image=image)
-  corners = get_corners(lines, image=image)
-  return corners
+    boundary = get_boundary(image, scale=scale)
+    lines = get_box_lines(boundary, image=image)
+    corners = get_corners(lines, image=image)
+    return corners
+
 
 def corners_to_geojson(corners):
-  newPolygon = geojson.Polygon([[corners["top_left"], corners["top_right"], corners["bottom_right"], corners["bottom_left"], corners["top_left"]]])
-  newFeature = geojson.Feature(geometry = newPolygon)
-  return newFeature
+    newPolygon = geojson.Polygon(
+        [
+            [
+                corners["top_left"],
+                corners["top_right"],
+                corners["bottom_right"],
+                corners["bottom_left"],
+                corners["top_left"],
+            ]
+        ]
+    )
+    newFeature = geojson.Feature(geometry=newPolygon)
+    return newFeature

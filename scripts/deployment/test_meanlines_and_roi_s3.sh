@@ -36,12 +36,16 @@ echo "writing to $dir"
 
 # Run the processing Python script
 sh set_seismo_status.sh $image_name 0
-python test_meanlines_and_roi.py --image "$image_path" --output "$dir" --stats stats.json
+
+# Use PROJECT_ROOT to point to tests/ folder
+ROOT_DIR=${PROJECT_ROOT:-"../.."}
+python3 "$ROOT_DIR/tests/test_meanlines_and_roi.py" --image "$image_path" --output "$dir" --stats stats.json
+
 sh set_seismo_status.sh $image_name 3
 
 # ===== COPY TO LOCAL FOLDER =====
 # Create local output directory
-local_out_dir="outputs/${image_name%.*}"  # remove .png extension
+local_out_dir="$ROOT_DIR/outputs/${image_name%.*}"  # remove .png extension
 mkdir -p "$local_out_dir"
 
 # Copy everything from tmp dir to local output folder

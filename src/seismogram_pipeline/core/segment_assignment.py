@@ -1,14 +1,26 @@
 import geojson
+import os, yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from .timer import timeStart, timeEnd
 from geojson import Feature, FeatureCollection, LineString
 import json
 
-# make this True to enable debug printing
-debug = False
+# import current debug status
+CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../config.yaml"))
 
-def assign_segments_to_meanlines(segments, meanlines, segment_data):
+with open(CONFIG_PATH, "r") as f:
+    config = yaml.safe_load(f)
+
+debug = config["project"].get("debug")
+
+def assign_segments_to_meanlines(
+    segments, meanlines, segment_data, 
+    max_search_dist=45, max_overlap=20, max_save_dist=1200,
+    base_timing_spacing = 232, min_timing_slope_dist = 5, max_timing_slope_dist = 100,
+    max_coord_length = 18, max_sd = 8, max_coord_search = 15000, tolerance_window = 15, min_hits = 3
+):
+    # TODO: determine which are purely for debugging and which are not needed
     meanline_database = {}
     timing_marks = {}
     meanline_comp = []
@@ -25,7 +37,7 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
     all_timing = []
     timing_x = []
     timing_y = []
-    timing_spacing = 232
+    timing_spacing = base_timing_spacing
     """Lots of these exist for debugging purposes."""
 
     """Given segments(a geojson file of all points of segments), meanlines(start and endpoints of the meanlines)
@@ -34,54 +46,86 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
 
     count = 0
     for meanline in meanlines["features"]:
-        meanline_info = {"segments": [], "distances": [], "domain": [], "id": meanline["id"]}
+        meanline_info = {
+            "segments": [],
+            "distances": [],
+            "domain": [],
+            "id": meanline["id"],
+        }
         meanline_assigned = {"meanline": 0, "slope": 0}
         meanline_assigned["meanline"] = count
         meanline_coordinates = meanlines["features"][count]["geometry"]["coordinates"]
-        meanline_assigned["slope"] = (float(meanline_coordinates[1][1])-float(meanline_coordinates[0][1]))/(float(meanline_coordinates[1][0])-float(meanline_coordinates[0][0]))
+        meanline_assigned["slope"] = (
+            float(meanline_coordinates[1][1]) - float(meanline_coordinates[0][1])
+        ) / (float(meanline_coordinates[1][0]) - float(meanline_coordinates[0][0]))
         meanline_comp.append(meanline_assigned)
         meanline_database.update({count: meanline_info})
-        count = count+1
+        count = count + 1
     """assigns meanlines to a database with info on its slope, which segments have been assigned to any given meanline,
     and the distance of the average y to the point on the meanline in the middle of the segment's x domain. Also
     contains information of which x-domains are currently assigned to on the meanline"""
 
-
     for segment in segments["features"]:
         coordinates = np.array(segment["geometry"]["coordinates"])
-        temp_domain = [coordinates[0,0], coordinates[len(coordinates)-1, 0]]
+        temp_domain = [coordinates[0, 0], coordinates[len(coordinates) - 1, 0]]
         domain.append(temp_domain)
     """sends the domain of each segment to a variable called domain"""
     seg_count = 0
     for segment in segment_data["features"]:
         which_meanline = 0
-        dist = 45
+        dist = max_search_dist
         overlap_points = 0
         seg_isin = []
-        #Distance depends on scale: play with this parameter.
+        # Distance depends on scale: play with this parameter.
 
         for meanline in range(len(meanline_comp)):
-            seg_dist = abs(segment["properties"]["average_y"]-(meanline_comp[meanline]["slope"]*(np.mean(domain[seg_count]) - meanlines["features"][meanline]["geometry"]["coordinates"][0][0])+meanlines["features"][meanline]["geometry"]["coordinates"][0][1]))
-            if  seg_dist < dist:
+            seg_dist = abs(
+                segment["properties"]["average_y"]
+                - (
+                    meanline_comp[meanline]["slope"]
+                    * (
+                        np.mean(domain[seg_count])
+                        - meanlines["features"][meanline]["geometry"]["coordinates"][0][
+                            0
+                        ]
+                    )
+                    + meanlines["features"][meanline]["geometry"]["coordinates"][0][1]
+                )
+            )
+            if seg_dist < dist:
                 dist = seg_dist
                 which_meanline = meanline
                 """Finds the meanline to which the segment is closest"""
-        if dist == 45:
+        if dist == max_search_dist:
             dist = "null"
 
         for domain_check in range(len(meanline_database[which_meanline]["domain"])):
-            overlapping = list(set(range(int(meanline_database[which_meanline]["domain"][domain_check][0]), int(meanline_database[which_meanline]["domain"][domain_check][1]))).intersection(list(range(int(domain[seg_count][0]), int(domain[seg_count][1]+1)))))
+            overlapping = list(
+                set(
+                    range(
+                        int(
+                            meanline_database[which_meanline]["domain"][domain_check][0]
+                        ),
+                        int(
+                            meanline_database[which_meanline]["domain"][domain_check][1]
+                        ),
+                    )
+                ).intersection(
+                    list(
+                        range(int(domain[seg_count][0]), int(domain[seg_count][1] + 1))
+                    )
+                )
+            )
             if len(overlapping) != 0:
-                seg_isin.append(meanline_database[which_meanline]["segments"][domain_check])
+                seg_isin.append(
+                    meanline_database[which_meanline]["segments"][domain_check]
+                )
             overlap_points += len(overlapping)
 
-
-
-        if overlap_points <= 20 and dist != "null":
+        if overlap_points <= max_overlap and dist != "null":
             meanline_database[which_meanline]["segments"].append(segment["id"])
             meanline_database[which_meanline]["distances"].append(dist)
             meanline_database[which_meanline]["domain"].append(domain[seg_count])
-
 
         elif dist == "null":
             stranded_segments.append(seg_count)
@@ -97,30 +141,69 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
     """finds the average y of the segment, compares it to each meanline. assigns it to a meanline if it is less than
     dist pixels away."""
 
-
-
     for meanline_time in range(len(meanline_comp)):
         meanline_timing = []
         for stranded_timing in stranded_segments:
-            if 5 < meanline_comp[meanline_time]["slope"]*((segments["features"][stranded_timing]["geometry"]["coordinates"][0][0]) - meanlines["features"][meanline_time]["geometry"]["coordinates"][0][0]) + meanlines["features"][meanline_time]["geometry"]["coordinates"][0][1] - segments["features"][stranded_timing]["geometry"]["coordinates"][0][1] < 100 and len(segments["features"][stranded_timing]["geometry"]["coordinates"]) < 18 and segment_data["features"][stranded_timing]["properties"]["standard_deviation"] < 8:
+            if (
+                min_timing_slope_dist
+                < meanline_comp[meanline_time]["slope"]
+                * (
+                    (
+                        segments["features"][stranded_timing]["geometry"][
+                            "coordinates"
+                        ][0][0]
+                    )
+                    - meanlines["features"][meanline_time]["geometry"]["coordinates"][
+                        0
+                    ][0]
+                )
+                + meanlines["features"][meanline_time]["geometry"]["coordinates"][0][1]
+                - segments["features"][stranded_timing]["geometry"]["coordinates"][0][1]
+                < max_timing_slope_dist
+                and len(
+                    segments["features"][stranded_timing]["geometry"]["coordinates"]
+                )
+                < max_coord_length
+                and segment_data["features"][stranded_timing]["properties"][
+                    "standard_deviation"
+                ]
+                < max_sd
+            ):
                 meanline_timing.append(stranded_timing)
         if debug:
             print(meanline_time)
         certain = []
         for timings in meanline_timing:
             timing_list = []
-            timing_guess = list(range(int(segment_data["features"][timings]["geometry"]["coordinates"][0][0]), 15000, 232))
+            timing_guess = list(
+                range(
+                    int(
+                        segment_data["features"][timings]["geometry"]["coordinates"][0][
+                            0
+                        ]
+                    ),
+                    max_coord_search,
+                    base_timing_spacing,
+                )
+            )
             number_included = 0
             for comb in meanline_timing:
                 for guesses in timing_guess:
-                    if abs(segment_data["features"][comb]["geometry"]["coordinates"][0][0] - guesses) < 15:
+                    if (
+                        abs(
+                            segment_data["features"][comb]["geometry"]["coordinates"][
+                                0
+                            ][0]
+                            - guesses
+                        )
+                        < tolerance_window
+                    ):
                         number_included += 1
                         timing_list.append(comb)
 
-            if len(timing_list) >= 3:
+            if len(timing_list) >= min_hits:
                 for timing_seg in timing_list:
                     certain.append(timing_seg)
-
 
         meanline_timing = set(certain)
         for time_pop in meanline_timing:
@@ -129,7 +212,9 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
         x_plot_timing = []
         y_plot_timing = []
         for times in meanline_timing:
-            times_array = np.array(segments["features"][times]["geometry"]["coordinates"])
+            times_array = np.array(
+                segments["features"][times]["geometry"]["coordinates"]
+            )
 
             each_timing.append(times_array)
         all_timing.append(each_timing)
@@ -141,14 +226,12 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
         timing_y.append(y_plot_timing)
         timing_marks.update({meanline_time: meanline_timing})
 
-
-
-
         for time_segments in meanline_timing:
-            meanline_database[meanline_time]["segments"].append(segments["features"][time_segments]["id"])
+            meanline_database[meanline_time]["segments"].append(
+                segments["features"][time_segments]["id"]
+            )
             meanline_database[meanline_time]["distances"].append(50)
             meanline_database[meanline_time]["domain"].append(domain[time_segments])
-
 
     to_pop_stranded = []
     for remaining in stranded_segments:
@@ -156,16 +239,53 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
         meanline_distance = []
         candidates = []
         meanline_number = 0
-        save_dist = 1200
-        overlap_max = 5
+        save_dist = max_save_dist
+        overlap_max = 5 # unused
         for meanline_remaining in range(len(meanline_comp)):
             overlap_point = 0
-            for domain_check in range(len(meanline_database[meanline_remaining]["domain"])):
-                overlapping = list(set(range(int(meanline_database[meanline_remaining]["domain"][domain_check][0]), int(meanline_database[meanline_remaining]["domain"][domain_check][1]))).intersection(list(range(int(domain[remaining][0]), int(domain[remaining][1]+1)))))
+            for domain_check in range(
+                len(meanline_database[meanline_remaining]["domain"])
+            ):
+                overlapping = list(
+                    set(
+                        range(
+                            int(
+                                meanline_database[meanline_remaining]["domain"][
+                                    domain_check
+                                ][0]
+                            ),
+                            int(
+                                meanline_database[meanline_remaining]["domain"][
+                                    domain_check
+                                ][1]
+                            ),
+                        )
+                    ).intersection(
+                        list(
+                            range(
+                                int(domain[remaining][0]), int(domain[remaining][1] + 1)
+                            )
+                        )
+                    )
+                )
                 if len(overlapping) != 0:
                     overlap_point += len(overlapping)
             meanline_overlap.append(overlap_point)
-            remaining_dist = abs(segment_data["features"][remaining]["properties"]["average_y"]-(meanline_comp[meanline_remaining]["slope"]*(np.mean(domain[remaining]) - meanlines["features"][meanline_remaining]["geometry"]["coordinates"][0][0])+meanlines["features"][meanline_remaining]["geometry"]["coordinates"][0][1]))
+            remaining_dist = abs(
+                segment_data["features"][remaining]["properties"]["average_y"]
+                - (
+                    meanline_comp[meanline_remaining]["slope"]
+                    * (
+                        np.mean(domain[remaining])
+                        - meanlines["features"][meanline_remaining]["geometry"][
+                            "coordinates"
+                        ][0][0]
+                    )
+                    + meanlines["features"][meanline_remaining]["geometry"][
+                        "coordinates"
+                    ][0][1]
+                )
+            )
             meanline_distance.append(remaining_dist)
 
         for min_check in range(len(meanline_overlap)):
@@ -180,13 +300,14 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
             print(candidates)
             print(meanline_distance)
             print(meanline_number)
-        meanline_database[meanline_number]["segments"].append(segments["features"][remaining]["id"])
+        meanline_database[meanline_number]["segments"].append(
+            segments["features"][remaining]["id"]
+        )
         meanline_database[meanline_number]["distances"].append(save_dist)
         meanline_database[meanline_number]["domain"].append(domain[remaining])
         to_pop_stranded.append(remaining)
     for to_pop in to_pop_stranded:
         stranded_segments.pop(stranded_segments.index(to_pop))
-
 
     """
         if overlap_points < 20 and dist != "null":
@@ -272,11 +393,9 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
     """still_going loop will assign orphaned segments to a meanline where segments have already been assigned, working backwards from the nearest orphaned segment. It will rerun the loop until there are no more
     orphaned segments being assigned to neighboring segments' meanlines."""
 
-
     for numbers in range(len(meanline_database)):
         which_segments = meanline_database[numbers]["segments"]
         segment_arrays.append(which_segments)
-
 
     for meanline in range(len(segment_arrays)):
         each_segment = []
@@ -290,7 +409,9 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
                         if value == index:
                             index = each_seg
                             break
-            segment_array = np.array(segments["features"][index]["geometry"]["coordinates"])
+            segment_array = np.array(
+                segments["features"][index]["geometry"]["coordinates"]
+            )
 
             each_segment.append(segment_array)
         all_segments.append(each_segment)
@@ -306,9 +427,6 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
         y_plot[segment_extend].extend(timing_y[segment_extend])
 
     """makes a data table of arrays with x and y values for points assigned to each meanline"""
-
-
-
 
     orphan_array = []
     for orphan in stranded_segments:
@@ -350,6 +468,7 @@ def assign_segments_to_meanlines(segments, meanlines, segment_data):
 
     return meanline_database
 
+
 def save_assignments_as_json(data, filepath):
     """
     Given a data dictionary (generated by get_endpoint_data), returns a GeoJson object of the data.
@@ -358,5 +477,5 @@ def save_assignments_as_json(data, filepath):
     for key in data:
         json_assign.update({int(data[key]["id"]): data[key]["segments"]})
 
-    with open(filepath, 'w') as outfile:
+    with open(filepath, "w") as outfile:
         json.dump(json_assign, outfile)

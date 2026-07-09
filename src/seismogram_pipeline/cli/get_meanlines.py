@@ -18,47 +18,62 @@ Options:
   --debug <directory>  Save intermediate steps as images for inspection in <directory>.
 
 """
-
+import os, yaml
 from docopt import docopt
 
+
 def get_meanlines(in_file, out_file, roi_file, scale=1, debug_dir=False):
-  if debug_dir:
-    from ..core.dir import ensure_dir_exists
-    ensure_dir_exists(debug_dir)
 
-  from ..core.debug import Debug
-  if debug_dir:
-    Debug.set_directory(debug_dir)
+    CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.json'))
 
-  from ..core.timer import timeStart, timeEnd
-  from ..core.load_image import get_image
-  from ..core.geojson_io import get_features, save_features
-  from ..core.polygon_mask import mask_image
-  from ..core.meanline_detection import detect_meanlines, meanlines_to_geojson
+    with open(CONFIG_PATH, "r") as f:
+        storage_config = yaml.safe_load(f)['storage']
 
-  timeStart("get meanlines")
+    if debug_dir:
+        from ..core.dir import ensure_dir_exists
 
-  timeStart("read image")
-  image = get_image(in_file)
-  timeEnd("read image")
+        ensure_dir_exists(debug_dir)
 
-  roi_polygon = get_features(roi_file)["geometry"]["coordinates"][0]
+    from ..core.debug import Debug
 
-  timeStart("mask image")
-  masked_image = mask_image(image, roi_polygon)
-  timeEnd("mask image")
+    if debug_dir:
+        Debug.set_directory(debug_dir)
 
-  meanlines = detect_meanlines(masked_image, scale=scale)
+    from ..core.timer import timeStart, timeEnd
+    from ..core.load_image import get_image
+    from ..core.geojson_io import get_features, save_features
+    from ..core.polygon_mask import mask_image
+    from ..core.meanline_detection import detect_meanlines, meanlines_to_geojson
 
-  timeStart("convert to geojson")
-  meanlines_as_geojson = meanlines_to_geojson(meanlines)
-  timeEnd("convert to geojson")
+    timeStart("get meanlines")
 
-  timeStart("saving as geojson")
-  save_features(meanlines_as_geojson, out_file)
-  timeEnd("saving as geojson")
+    timeStart("read image")
+    image = get_image(in_file)
+    timeEnd("read image")
 
-  timeEnd("get meanlines")
+    roi_polygon = get_features(roi_file)["geometry"]["coordinates"][0]
+
+    timeStart("mask image")
+    masked_image = mask_image(image, roi_polygon)
+    timeEnd("mask image")
+
+    meanlines = detect_meanlines(masked_image, scale=scale)
+
+    timeStart("convert to geojson")
+    meanlines_as_geojson = meanlines_to_geojson(meanlines)
+    timeEnd("convert to geojson")
+
+    # config default fallback
+    if not out_file:
+        out_file = os.path.join(storage_config.get("outputs_dir", "data/outputs"),
+                                storage_config['pipeline_outputs']['meanlines'])
+
+    timeStart("saving as geojson")
+    save_features(meanlines_as_geojson, out_file)
+    timeEnd("saving as geojson")
+
+    timeEnd("get meanlines")
+
 
 def main():
     """Main entry point for the get_meanlines CLI."""
@@ -74,5 +89,6 @@ def main():
     else:
         print(arguments)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -22,9 +22,9 @@ Options:
 from docopt import docopt
 
 def analyze_image(in_file, out_dir, stats_file=False, scale=1, debug_dir=False, fix_seed=False):
-  from lib.dir import ensure_dir_exists
-  from lib.debug import Debug
-  from lib.stats_recorder import Record
+  from src.seismogram_pipeline.core.dir import ensure_dir_exists
+  from src.seismogram_pipeline.core.debug import Debug
+  from src.seismogram_pipeline.core.stats_recorder import Record
 
   if debug_dir:
     Debug.set_directory(debug_dir)
@@ -37,13 +37,13 @@ def analyze_image(in_file, out_dir, stats_file=False, scale=1, debug_dir=False, 
 
   ensure_dir_exists(out_dir)
 
-  from lib.timer import timeStart, timeEnd
+  from src.seismogram_pipeline.core.timer import timeStart, timeEnd
 
-  from lib.load_image import get_grayscale_image, image_as_float
-  from lib.roi_detection import get_roi, corners_to_geojson
-  from lib.polygon_mask import mask_image
-  from lib.meanline_detection import detect_meanlines, meanlines_to_geojson
-  from lib.geojson_io import save_features
+  from src.seismogram_pipeline.core.load_image import get_grayscale_image, image_as_float
+  from src.seismogram_pipeline.core.roi_detection import get_roi, corners_to_geojson
+  from src.seismogram_pipeline.core.polygon_mask import mask_image
+  from src.seismogram_pipeline.core.meanline_detection import detect_meanlines, meanlines_to_geojson
+  from src.seismogram_pipeline.core.geojson_io import save_features
 
   paths = {
     "roi": out_dir+"/roi.json",
