@@ -50,6 +50,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Initial creation of the seismogram pipeline processing architecture, including automated queue management scripts. [bennlich; 11-18-2015]
-- Added complete geographic features framework, exporting region mapping parameters to integer-mapped GeoJSON format. [Marius Nita; 7-1-2015; #10]
-- Introduced full image filtering matrices including automated Otsu thresholding operations, morphological filters, and Gaussian pyramids. [bennlich; 6-23-2015; #6]
+- Added complete geographic features framework, exporting region mapping parameters to integer-mapped GeoJSON format. [Marius Nita; 7-1-2015; commit cf01c36]
+- Introduced full image filtering matrices including automated Otsu thresholding operations, morphological filters, and Gaussian pyramids. [bennlich; 6-23-2015; commit a40d8f4]
 - Added core Hough Lines detection algorithms alongside Region of Interest (ROI) boundaries processors. [bennlich; 4-28-2015]
