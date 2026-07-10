@@ -19,10 +19,7 @@ from .otsu_threshold_image import otsu_threshold_image
 import matplotlib.pyplot as plt
 import geojson
 
-PARAMS = {"trace-width": lambda scale: int(17 * scale)} # TODO: recompile so that uses config.yaml
-
-
-def get_boundary(grayscale_image, scale=1):
+def get_boundary(grayscale_image, scale=1, base_trace_width = 17):
     timeStart("threshold image")
     black_and_white_image = otsu_threshold_image(grayscale_image)
     timeEnd("threshold image")
@@ -30,7 +27,8 @@ def get_boundary(grayscale_image, scale=1):
     Debug.save_image("roi", "black_and_white_image", black_and_white_image)
 
     timeStart("morphological open image")
-    filter_element_opening = disk(PARAMS["trace-width"](scale))
+    trace_width = lambda scale: int(base_trace_width * scale)
+    filter_element_opening = disk(trace_width(scale))
     opened_image = cv2.morphologyEx(
         255 * black_and_white_image.astype(np.uint8),
         cv2.MORPH_OPEN,
@@ -74,15 +72,17 @@ def get_boundary(grayscale_image, scale=1):
     return region_of_interest_boundary
 
 
-def get_hough_lines(image, min_angle, max_angle):
-    min_separation_distance = 5
-    min_separation_angle = 5
+def get_hough_lines(
+    image, 
+    min_angle, max_angle, 
+    min_separation_distance, min_separation_angle
+):
     return get_best_hough_lines(
         image, min_angle, max_angle, min_separation_distance, min_separation_angle
     )
 
 
-def get_box_lines(boundary, image=None):
+def get_box_lines(boundary, image=None, min_separation_distance=5, min_separation_angle=5):
     height, width = boundary.shape
     [half_width, half_height] = np.floor([0.5 * width, 0.5 * height]).astype(int)
 
@@ -98,18 +98,43 @@ def get_box_lines(boundary, image=None):
     timeStart("get hough lines")
     hough_lines = {
         "left": np.array(
-            get_hough_lines(image_regions["left"], min_angle=-10, max_angle=10)
+            get_hough_lines(
+                image_regions["left"], 
+                min_angle=-10, 
+                max_angle=10,
+                min_separation_distance=min_separation_distance,
+                min_separation_angle=min_separation_angle
+            )
         ),
         "right": np.array(
-            get_hough_lines(image_regions["right"], min_angle=-10, max_angle=10)
+            get_hough_lines(
+                image_regions["right"], 
+                min_angle=-10, 
+                max_angle=10,
+                min_separation_distance=min_separation_distance,
+                min_separation_angle=min_separation_angle
+            )
         ),
         "top": np.array(
-            get_hough_lines(image_regions["top"], min_angle=-120, max_angle=-70)
+            get_hough_lines(
+                image_regions["top"], 
+                min_angle=-120, 
+                max_angle=-70,
+                min_separation_distance=min_separation_distance,
+                min_separation_angle=min_separation_angle
+            )
         ),
         "bottom": np.array(
-            get_hough_lines(image_regions["bottom"], min_angle=-120, max_angle=-70)
+            get_hough_lines(
+                image_regions["bottom"], 
+                min_angle=-120, 
+                max_angle=-70,
+                min_separation_distance=min_separation_distance,
+                min_separation_angle=min_separation_angle 
+            )
         ),
     }
+    
     timeEnd("get hough lines")
 
     hough_lines["bottom"] += [0, half_height]
@@ -164,8 +189,8 @@ def get_corners(lines, image=None):
         Debug.save_image("roi", "roi_corners", image_copy)
 
     if Record.active:
-        from lib.utilities import poly_area2D
-        from lib.quality_control import points_to_rho_theta
+        from .utilities import poly_area2D
+        from .quality_control import points_to_rho_theta
 
         corners_clockwise = [
             corners["top_left"],
@@ -196,9 +221,11 @@ def get_corners(lines, image=None):
     return corners
 
 
-def get_roi(image, scale):
-    boundary = get_boundary(image, scale=scale)
-    lines = get_box_lines(boundary, image=image)
+def get_roi(image, scale, config: dict = None):
+    base_trace_width = config.get('base_trace_width')
+    min_separation_angle = config.get('min_separation_angle')
+    boundary = get_boundary(image, scale=scale, base_trace_width=base_trace_width)
+    lines = get_box_lines(boundary, image=image, )
     corners = get_corners(lines, image=image)
     return corners
 

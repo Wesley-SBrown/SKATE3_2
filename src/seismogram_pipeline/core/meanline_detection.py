@@ -12,15 +12,9 @@ from skimage.color import gray2rgb
 import numpy.ma as ma
 import geojson
 
-# TODO: maybe instead of the PARAM dict, pass the config into the functions
-PARAMS = {
-    "small-object-size": lambda scale: int(500 * scale * scale),
-    "trace-spacing": lambda scale: int(150 * scale),
-}
-
-
-def detect_meanlines(masked_image, corners, scale=1):
-    padding = PARAMS["trace-spacing"](scale) / 2
+def detect_meanlines(masked_image, corners, scale=1, config: dict = None):
+    trace_spacing = lambda scale: int(config.get('base_trace_spacing') * scale)
+    padding = trace_spacing(scale) / 2
 
     timeStart("bound image")
     # effectively shrink the roi by a distance **padding**
@@ -54,8 +48,12 @@ def detect_meanlines(masked_image, corners, scale=1):
     Debug.save_image("meanlines", "thresholded_image", black_and_white_image)
 
     timeStart("remove small objects")
+
+    # create lambda function for object sizes
+    small_object_size = lambda scale: int(config.get("base_small_object_size") * scale * scale)
+
     filtered_image = remove_small_objects(
-        black_and_white_image, PARAMS["small-object-size"](scale)
+        black_and_white_image, small_object_size(scale)
     )
     timeEnd("remove small objects")
 
@@ -65,16 +63,17 @@ def detect_meanlines(masked_image, corners, scale=1):
     roi_top_angle = np.rad2deg(
         points_to_rho_theta(corners["top_left"], corners["top_right"])[1]
     )
-    angle_padding = 2  # degrees
+    angle_padding = config.get('angle_padding_deg')  # degrees
     min_angle = roi_top_angle - angle_padding
     max_angle = roi_top_angle + angle_padding
-    min_separation_distance = int((2.0 / 3) * PARAMS["trace-spacing"](scale))
+    separation_distance_ratio = config.get("separation_distance_ratio")
+    min_separation_distance = int((separation_distance_ratio) * trace_spacing(scale))
     lines = get_all_hough_lines(
         filtered_image,
         min_angle=min_angle,
         max_angle=max_angle,
         min_separation_distance=min_separation_distance,
-        min_separation_angle=5,
+        min_separation_angle=config.get("min_separation_angle_deg"),
     )
     timeEnd("get hough lines")
 

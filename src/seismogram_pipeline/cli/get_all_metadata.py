@@ -60,12 +60,14 @@ def analyze_image(
     import os
     import yaml
 
+    # Load complete config file
     CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.yaml'))
     with open(CONFIG_PATH, "r") as f:
         config = yaml.safe_load(f)
     
     storage_config = config['storage']
     output_filenames = storage_config['pipeline_outputs']
+    settings = config['pipeline_settings']
 
     paths = {
         "roi": os.path.join(out_dir, output_filenames["roi"]),
@@ -85,7 +87,7 @@ def analyze_image(
 
     print("\n--ROI--")
     timeStart("get region of interest")
-    corners = get_roi(img_gray, scale=scale)
+    corners = get_roi(img_gray, scale=scale, config=settings.get("roi_detection"))
     timeEnd("get region of interest")
 
     timeStart("convert roi to geojson")
@@ -105,7 +107,7 @@ def analyze_image(
 
     Debug.save_image("main", "masked_image", masked_image.filled(0))
     
-    image_processing = config['pipeline_settings']['image_processing']
+    image_processing = settings['image_processing']
     max_val = image_processing['max_intensity']
     bin_count = image_processing['histogram_bins']
 
@@ -116,7 +118,12 @@ def analyze_image(
         Record.record("roi_intensity_hist", image_hist.tolist())
 
     print("\n--MEANLINES--")
-    meanlines = detect_meanlines(masked_image, corners, scale=scale)
+    meanlines = detect_meanlines(
+        masked_image, 
+        corners, 
+        scale=scale,
+        config=settings.get("meanline_detection")  
+    )
 
     timeStart("convert meanlines to geojson")
     meanlines_as_geojson = meanlines_to_geojson(meanlines)
