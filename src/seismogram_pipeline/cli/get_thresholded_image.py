@@ -15,10 +15,22 @@ Options:
 """
 
 from docopt import docopt
+from typing import Union
 
+def get_thresholded_image(
+        in_file: str, out_file: str, debug_dir: Union[str, bool] = False) -> None:
+    """
+    Process grayscale image and writes threshold image
 
-def get_thresholded_image(in_file, out_file, debug_dir=False):
-    if debug_dir:
+    in_file: str
+        Grayscale seismogram image file path
+    out_file: str
+        Output image file path
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    """
+    
+    if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
 
         ensure_dir_exists(debug_dir)

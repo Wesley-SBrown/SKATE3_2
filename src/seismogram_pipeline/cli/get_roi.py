@@ -15,12 +15,29 @@ Options:
   --debug <directory>  Save intermediate steps as images for inspection in <directory>.
 
 """
-import os, yaml
 from docopt import docopt
+from typing import Union
 
+def get_roi(
+    in_file: str, out_file: str, 
+    scale: float = 1, debug_dir: Union[str, bool] = False
+) -> None:
+    """
+    Process grayscale image and write region of interest
 
-def get_roi(in_file, out_file, scale=1, debug_dir=False):
-    if debug_dir:
+    Parameters
+    ----------
+    in_file: str
+        Grayscale seismogram image file path
+    out_file: str
+        Output file path
+    scale: int, default 1 (unused)
+        Image scale factor
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    """
+    
+    if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
 
         ensure_dir_exists(debug_dir)
@@ -42,7 +59,7 @@ def get_roi(in_file, out_file, scale=1, debug_dir=False):
     corners_as_geojson = corners_to_geojson(corners)
     timeEnd("convert to geojson")
 
-    if debug_dir:
+    if isinstance(debug_dir, str):
         from ..core.polygon_mask import mask_image
         from scipy import misc
 
@@ -57,7 +74,7 @@ def get_roi(in_file, out_file, scale=1, debug_dir=False):
         save_features(corners_as_geojson, out_file)
         timeEnd("saving as geojson")
     else:
-        print(corners_as_geojson) # NOTE: since functionality here already, config fallback was not implemented
+        print(corners_as_geojson)
 
     timeEnd("ROI")
 

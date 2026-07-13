@@ -19,7 +19,20 @@ from skimage.transform import resize
 import imageio
 
 
-def resize_image(in_file, scale, out_file):
+def resize_image(in_file: str, scale: float, out_file: str) -> None:
+    """
+    Process input image and save resized image
+
+    Parameters
+    ----------
+    in_file: str
+        Grayscale  image file path
+    out_file: str
+        Output image file path
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    """
+    
     from ..core.load_image import get_image
     from ..core.timer import timeStart, timeEnd
 

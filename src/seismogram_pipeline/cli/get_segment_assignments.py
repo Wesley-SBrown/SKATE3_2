@@ -17,9 +17,19 @@ Options:
 from docopt import docopt
 
 
-def get_segment_assignments(segments_file, meanlines_file, out_file):
+def get_segment_assignments(
+        segments_file: str, meanlines_file: str, out_file: str) -> None:
     """
     Process the segments and meanlines files to extract and write segment assignments
+
+    Parameters
+    ----------
+    segments_file: str
+        Input segments file path
+    meanlines_file: str
+        Input meanlines file path
+    out_file: str
+        Output segment assignments file path
     """
 
     from ..core.geojson_io import get_features

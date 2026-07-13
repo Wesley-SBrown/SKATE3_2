@@ -18,15 +18,38 @@ Options:
 
 import os, yaml
 from docopt import docopt
+from typing import Union
 
 
-def get_intersections(in_file, roi_file, out_file, scale=1, debug_dir=False):
+def get_intersections(
+    in_file: str, roi_file: str, out_file: str, 
+    scale: int = 1, debug_dir: Union[str, bool] = False
+) -> None:
+    """
+    Process grayscale image & region of interest and write intersections
+
+    Parameters
+    ----------
+    in_file: str
+        Grayscale seismogram image filepath
+    roi_file: str
+        Region of interest geojson filepath
+    out_file: str
+        Output file path
+    scale: float, default 1 (unused)
+        Image scale factor
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+
+    """
+    # TODO: implement scale resizing
 
     CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.yaml'))
     with open(CONFIG_PATH, "r") as f:
         storage_config = yaml.safe_load(f)['storage']
 
-    if debug_dir:
+    # guards against accidental True value passing check
+    if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
 
         ensure_dir_exists(debug_dir)
@@ -62,7 +85,7 @@ def get_intersections(in_file, roi_file, out_file, scale=1, debug_dir=False):
     save_features(intersections_as_geojson, out_file)
     timeEnd("saving to " + out_file)
 
-    if debug_dir:
+    if isinstance(debug_dir, str):
         # safe platform-agnositc path combining 
         debug_filename = storage_config["pipeline_outputs"].get('intersections_raster', "intersections.png")
         debug_filepath = os.path.join(debug_dir, debug_filename)
@@ -76,8 +99,6 @@ def get_intersections(in_file, roi_file, out_file, scale=1, debug_dir=False):
 
 def main():
     """Main entry point for the get_intersections CLI."""
-    # TODO: decide whether to include functionality for `scale` within `get intersections`
-    # or do both? (config fallback)
     arguments = docopt(__doc__)
     in_file = arguments["--image"]
     roi_file = arguments["--roi"]

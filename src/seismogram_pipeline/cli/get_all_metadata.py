@@ -22,10 +22,33 @@ Options:
 
 from docopt import docopt
 import imageio.v2 as imageio
+from typing import Union
 
 def analyze_image(
-    in_file, out_dir, stats_file=False, scale=1, debug_dir=False, fix_seed=False
-):
+    in_file: str, out_dir: str, 
+    stats_file: bool = False, scale: float = 1, 
+    debug_dir: Union[str, bool] = False, 
+    fix_seed: bool = False
+) -> None:
+    """
+    Process seismogram image and write statistics & metadata
+
+    Parameters
+    ----------
+    in_file: str
+        Input image file path
+    out_dir: str
+        Output metadata file path
+    stats_file: str
+        Ouput statistics file path 
+    scale: float, default 1
+        Image resize scale
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    fix_seed: bool, default False
+        Flag whether to run with fixed seed
+    """
+    
     from ..core.dir import ensure_dir_exists
     from ..core.debug import Debug
     from ..core.stats_recorder import Record
@@ -53,9 +76,9 @@ def analyze_image(
     from ..core.binarization import binary_image
     from ..core.intersection_detection import find_intersections
     from ..core.trace_segmentation import get_segments, segments_to_geojson
-    from ..core.geojson_io import save_features # , save_json
+    from ..core.geojson_io import save_features, save_json
     from ..core.utilities import encode_labeled_image_as_rgb
-    # from scipy import misc
+    from scipy import misc
     import numpy as np
     import os
     import yaml
@@ -69,6 +92,7 @@ def analyze_image(
     output_filenames = storage_config['pipeline_outputs']
     settings = config['pipeline_settings']
 
+    # use file directories instead of hardcoded strings 
     paths = {
         "roi": os.path.join(out_dir, output_filenames["roi"]),
         "meanlines": os.path.join(out_dir, output_filenames["meanlines"]),
@@ -189,7 +213,7 @@ def analyze_image(
             f"WARNING: image dtype is {intersection_image.dtype}, converting to uint8"
         )
         intersection_image = intersection_image.astype(np.uint8)
-    # misc.imsave(paths["intersections_raster"], intersection_image)
+    # misc.imsave(paths["intersections_raster"], intersection_image) # deprecated - saving here in case something breaks
     imageio.imwrite(paths["intersections_raster"], intersection_image)
     timeEnd("save intersections raster")
 
@@ -217,7 +241,7 @@ def analyze_image(
         rgb_segments = (rgb_segments * max_val).clip(0, max_val).astype(np.uint8)
 
     timeStart("save segment regions")
-    # misc.imsave(paths["segment_regions"], rgb_segments)
+    # misc.imsave(paths["segment_regions"], rgb_segments) # deprecated
     imageio.imwrite(paths["segment_regions"], rgb_segments)
     timeEnd("save segment regions")
 
@@ -229,6 +253,7 @@ def analyze_image(
     save_features(segments_as_geojson, paths["segments"])
     timeEnd("saving centerlines as geojson")
 
+    # TODO: fix the return logic below
     # return (img_gray, ridges, img_bin, intersections, img_seg)
     # return segments
     # detect center lines

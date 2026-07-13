@@ -17,10 +17,30 @@ Options:
 """
 
 from docopt import docopt
+from typing import Union
 
+def get_segments(
+    in_file: str, roi_file: str, out_file: str, 
+    scale: int = 1, debug_dir: Union[str, bool] = False
+) -> None:
+    """
+    Process grayscale image & region of interest and write segments
 
-def get_segments(in_file, roi_file, out_file, scale=1, debug_dir=False):
-    if debug_dir:
+    Parameters
+    ----------
+    in_file: str
+        Grayscale seismogram image file path
+    roi_file: str
+        Region of interest geojson file path
+    out_file: str
+        Output file path
+    scale: int, default 1 (unused)
+        Image scale factor
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    """
+    
+    if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
 
         ensure_dir_exists(debug_dir)

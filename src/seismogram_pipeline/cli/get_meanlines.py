@@ -20,23 +20,42 @@ Options:
 """
 import os, yaml
 from docopt import docopt
+from typing import Union
 
+def get_meanlines(
+    in_file: str, out_file: str, roi_file: str,
+    scale: float = 1, debug_dir: Union[str, bool] = False
+) -> None:
+    """
+    Process grayscale image and region of interest and write meanlines
 
-def get_meanlines(in_file, out_file, roi_file, scale=1, debug_dir=False):
+    Parameters
+    ----------
+    in_file: str
+        Input grayscale seismogram file path
+    out_file: str
+        Output geojson file path
+    roi_file: str
+        Region of interest geojson file path
+    scale: float, default 1
+        Image scale factor
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    """
 
     CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.json'))
 
     with open(CONFIG_PATH, "r") as f:
         storage_config = yaml.safe_load(f)['storage']
 
-    if debug_dir:
+    if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
 
         ensure_dir_exists(debug_dir)
 
     from ..core.debug import Debug
 
-    if debug_dir:
+    if isinstance(debug_dir, str):
         Debug.set_directory(debug_dir)
 
     from ..core.timer import timeStart, timeEnd

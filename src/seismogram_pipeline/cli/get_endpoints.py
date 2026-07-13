@@ -16,10 +16,18 @@ Options:
 from docopt import docopt
 
 
-def get_endpoints(segments_file, out_file):
+def get_endpoints(segments_file: str, out_file: str) -> None:
     """
     Processes the segments file to extract and write endpoints
+
+    Parameters
+    ----------
+    segments_file: str
+        Input segments file path
+    out_file: str
+        Output endpoints file path
     """
+    
     from ..core.geojson_io import get_features
     from ..core.endpoints import (
         get_endpoint_data,
