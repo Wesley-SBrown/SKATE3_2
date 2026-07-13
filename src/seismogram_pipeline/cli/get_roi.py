@@ -15,48 +15,69 @@ Options:
   --debug <directory>  Save intermediate steps as images for inspection in <directory>.
 
 """
-
 from docopt import docopt
+from typing import Union
 
-def get_roi(in_file, out_file, scale=1, debug_dir=False):
-  if debug_dir:
-    from ..core.dir import ensure_dir_exists
-    ensure_dir_exists(debug_dir)
+def get_roi(
+    in_file: str, out_file: str, 
+    scale: float = 1, debug_dir: Union[str, bool] = False
+) -> None:
+    """
+    Process grayscale image and write region of interest
 
-  from ..core.timer import timeStart, timeEnd
-  from ..core.load_image import get_image
-  from ..core.roi_detection import get_roi, corners_to_geojson
-  from ..core.geojson_io import save_features
+    Parameters
+    ----------
+    in_file: str
+        Grayscale seismogram image file path
+    out_file: str
+        Output file path
+    scale: int, default 1 (unused)
+        Image scale factor
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    """
+    
+    if isinstance(debug_dir, str):
+        from ..core.dir import ensure_dir_exists
 
-  timeStart("ROI")
+        ensure_dir_exists(debug_dir)
 
-  timeStart("read image")
-  image = get_image(in_file)
-  timeEnd("read image")
+    from ..core.timer import timeStart, timeEnd
+    from ..core.load_image import get_image
+    from ..core.roi_detection import get_roi, corners_to_geojson
+    from ..core.geojson_io import save_features
 
-  corners = get_roi(image, scale=scale)
+    timeStart("ROI")
 
-  timeStart("convert to geojson")
-  corners_as_geojson = corners_to_geojson(corners)
-  timeEnd("convert to geojson")
+    timeStart("read image")
+    image = get_image(in_file)
+    timeEnd("read image")
 
-  if debug_dir:
-    from ..core.polygon_mask import mask_image
-    from scipy import misc
-    roi_polygon = corners_as_geojson["geometry"]["coordinates"][0]
-    timeStart("mask image")
-    masked_image = mask_image(image, roi_polygon)
-    timeEnd("mask image")
-    misc.imsave(debug_dir+"/masked_image.png", masked_image.filled(0))
+    corners = get_roi(image, scale=scale)
 
-  if out_file:
-    timeStart("saving as geojson")
-    save_features(corners_as_geojson, out_file)
-    timeEnd("saving as geojson")
-  else:
-    print(corners_as_geojson)
+    timeStart("convert to geojson")
+    corners_as_geojson = corners_to_geojson(corners)
+    timeEnd("convert to geojson")
 
-  timeEnd("ROI")
+    if isinstance(debug_dir, str):
+        from ..core.polygon_mask import mask_image
+        from scipy import misc
+
+        roi_polygon = corners_as_geojson["geometry"]["coordinates"][0]
+        timeStart("mask image")
+        masked_image = mask_image(image, roi_polygon)
+        timeEnd("mask image")
+        misc.imsave(debug_dir + "/masked_image.png", masked_image.filled(0))
+
+    if out_file:
+        timeStart("saving as geojson")
+        save_features(corners_as_geojson, out_file)
+        timeEnd("saving as geojson")
+    else:
+        print(corners_as_geojson)
+
+    timeEnd("ROI")
+
 
 def main():
     """Main entry point for the get_roi CLI."""
@@ -71,5 +92,6 @@ def main():
     else:
         print(arguments)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

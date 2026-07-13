@@ -21,211 +21,265 @@ Options:
 """
 
 from docopt import docopt
-import imageio.v2 as imageio 
+import imageio.v2 as imageio
+from typing import Union
 
-def analyze_image(in_file, out_dir, stats_file=False, scale=1, debug_dir=False, fix_seed=False):
-  from ..core.dir import ensure_dir_exists
-  from ..core.debug import Debug
-  from ..core.stats_recorder import Record
+def analyze_image(
+    in_file: str, out_dir: str, 
+    stats_file: bool = False, scale: float = 1, 
+    debug_dir: Union[str, bool] = False, 
+    fix_seed: bool = False
+) -> None:
+    """
+    Process seismogram image and write statistics & metadata
 
-  if debug_dir:
-    Debug.set_directory(debug_dir)
+    Parameters
+    ----------
+    in_file: str
+        Input image file path
+    out_dir: str
+        Output metadata file path
+    stats_file: str
+        Ouput statistics file path 
+    scale: float, default 1
+        Image resize scale
+    debug_dir: str | bool, default False
+        Flag whether to save intermediate images
+    fix_seed: bool, default False
+        Flag whether to run with fixed seed
+    """
+    
+    from ..core.dir import ensure_dir_exists
+    from ..core.debug import Debug
+    from ..core.stats_recorder import Record
 
-  if fix_seed:
-    Debug.set_seed(1234567890)
+    if debug_dir:
+        Debug.set_directory(debug_dir)
 
-  if stats_file:
-    Record.activate()
+    if fix_seed:
+        Debug.set_seed(1234567890)
 
-  ensure_dir_exists(out_dir)
+    if stats_file:
+        Record.activate()
 
-  from ..core.timer import timeStart, timeEnd
+    ensure_dir_exists(out_dir)
 
-  from ..core.load_image import get_grayscale_image, image_as_float
-  from skimage.morphology import medial_axis
-  from ..core.roi_detection import get_roi, corners_to_geojson
-  from ..core.polygon_mask import mask_image
-  from ..core.meanline_detection import detect_meanlines, meanlines_to_geojson
-  from ..core.threshold import flatten_background
-  from ..core.ridge_detection import find_ridges
-  from ..core.binarization import binary_image
-  from ..core.intersection_detection import find_intersections
-  from ..core.trace_segmentation import get_segments, segments_to_geojson
-  from ..core.geojson_io import save_features, save_json
-  from ..core.utilities import encode_labeled_image_as_rgb
-  from scipy import misc
-  import numpy as np
+    from ..core.timer import timeStart, timeEnd
 
-  paths = {
-    "roi": out_dir+"/roi.json",
-    "meanlines": out_dir+"/meanlines.json",
-    "intersections": out_dir+"/intersections.json",
-    "intersections_raster": out_dir+"/intersections_raster.png",
-    "segments": out_dir+"/segments.json",
-    "segment_regions": out_dir+"/segment_regions.png",
-    "segment_assignments": out_dir+"/segment_assignments.json"
-  }
+    from ..core.load_image import get_grayscale_image, image_as_float
+    from skimage.morphology import medial_axis
+    from ..core.roi_detection import get_roi, corners_to_geojson
+    from ..core.polygon_mask import mask_image
+    from ..core.meanline_detection import detect_meanlines, meanlines_to_geojson
+    from ..core.threshold import flatten_background
+    from ..core.ridge_detection import find_ridges
+    from ..core.binarization import binary_image
+    from ..core.intersection_detection import find_intersections
+    from ..core.trace_segmentation import get_segments, segments_to_geojson
+    from ..core.geojson_io import save_features, save_json
+    from ..core.utilities import encode_labeled_image_as_rgb
+    from scipy import misc
+    import numpy as np
+    import os
+    import yaml
 
-  timeStart("get all metadata")
+    # Load complete config file
+    CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.yaml'))
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)
+    
+    storage_config = config['storage']
+    output_filenames = storage_config['pipeline_outputs']
+    settings = config['pipeline_settings']
 
-  timeStart("read image")
-  img_gray = image_as_float(get_grayscale_image(in_file))
-  timeEnd("read image")
+    # use file directories instead of hardcoded strings 
+    paths = {
+        "roi": os.path.join(out_dir, output_filenames["roi"]),
+        "meanlines": os.path.join(out_dir, output_filenames["meanlines"]),
+        "intersections": os.path.join(out_dir, output_filenames["intersections"]),
+        "intersections_raster": os.path.join(out_dir, output_filenames["intersections_raster"]),
+        "segments": os.path.join(out_dir, output_filenames["segments"]),
+        "segment_regions": os.path.join(out_dir, output_filenames["segment_regions"]),
+        "segment_assignments": os.path.join(out_dir, output_filenames["segment_assignments"]),
+    }
 
-  print("\n--ROI--")
-  timeStart("get region of interest")
-  corners = get_roi(img_gray, scale=scale)
-  timeEnd("get region of interest")
+    timeStart("get all metadata")
 
-  timeStart("convert roi to geojson")
-  corners_as_geojson = corners_to_geojson(corners)
-  timeEnd("convert roi to geojson")
+    timeStart("read image")
+    img_gray = image_as_float(get_grayscale_image(in_file))
+    timeEnd("read image")
 
-  timeStart("saving roi as geojson")
-  save_features(corners_as_geojson, paths["roi"])
-  timeEnd("saving roi as geojson")
+    print("\n--ROI--")
+    timeStart("get region of interest")
+    corners = get_roi(img_gray, scale=scale, config=settings.get("roi_detection"))
+    timeEnd("get region of interest")
 
+    timeStart("convert roi to geojson")
+    corners_as_geojson = corners_to_geojson(corners)
+    timeEnd("convert roi to geojson")
 
-  print("\n--MASK IMAGE--")
-  roi_polygon = corners_as_geojson["geometry"]["coordinates"][0]
+    timeStart("saving roi as geojson")
+    save_features(corners_as_geojson, paths["roi"])
+    timeEnd("saving roi as geojson")
 
-  timeStart("mask image")
-  masked_image = mask_image(img_gray, roi_polygon)
-  timeEnd("mask image")
+    print("\n--MASK IMAGE--")
+    roi_polygon = corners_as_geojson["geometry"]["coordinates"][0]
 
-  Debug.save_image("main", "masked_image", masked_image.filled(0))
+    timeStart("mask image")
+    masked_image = mask_image(img_gray, roi_polygon)
+    timeEnd("mask image")
 
-  if Record.active:
-    non_masked_values = 255 * masked_image.compressed()
-    bins = np.arange(257)
-    image_hist, _ = np.histogram(non_masked_values, bins=bins)
-    Record.record("roi_intensity_hist", image_hist.tolist())
+    Debug.save_image("main", "masked_image", masked_image.filled(0))
+    
+    image_processing = settings['image_processing']
+    max_val = image_processing['max_intensity']
+    bin_count = image_processing['histogram_bins']
 
+    if Record.active:
+        non_masked_values = max_val * masked_image.compressed()
+        bins = np.arange(bin_count)
+        image_hist, _ = np.histogram(non_masked_values, bins=bins)
+        Record.record("roi_intensity_hist", image_hist.tolist())
 
-  print("\n--MEANLINES--")
-  meanlines = detect_meanlines(masked_image, corners, scale=scale)
+    print("\n--MEANLINES--")
+    meanlines = detect_meanlines(
+        masked_image, 
+        corners, 
+        scale=scale,
+        config=settings.get("meanline_detection")  
+    )
 
-  timeStart("convert meanlines to geojson")
-  meanlines_as_geojson = meanlines_to_geojson(meanlines)
-  timeEnd("convert meanlines to geojson")
+    timeStart("convert meanlines to geojson")
+    meanlines_as_geojson = meanlines_to_geojson(meanlines)
+    timeEnd("convert meanlines to geojson")
 
-  timeStart("saving meanlines as geojson")
-  save_features(meanlines_as_geojson, paths["meanlines"])
-  timeEnd("saving meanlines as geojson")
+    timeStart("saving meanlines as geojson")
+    save_features(meanlines_as_geojson, paths["meanlines"])
+    timeEnd("saving meanlines as geojson")
 
+    min_prob_threshold = image_processing['min_prob_threshold']
+    print("\n--FLATTEN BACKGROUND--")
+    img_dark_removed, background = flatten_background(
+        masked_image, prob_background=min_prob_threshold, return_background=True, img_gray=img_gray
+    )
 
-  print("\n--FLATTEN BACKGROUND--")
-  img_dark_removed, background = \
-    flatten_background(masked_image, prob_background=0.95,
-                       return_background=True, img_gray=img_gray)
+    Debug.save_image("main", "flattened_background", img_dark_removed)
 
-  Debug.save_image("main", "flattened_background", img_dark_removed)
+    masked_image = None
 
-  masked_image = None
+    print("\n--RIDGES--")
+    timeStart("get horizontal and vertical ridges")
+    ridges_h, ridges_v = find_ridges(img_dark_removed, background)
+    ridges = ridges_h | ridges_v
+    timeEnd("get horizontal and vertical ridges")
 
-  print("\n--RIDGES--")
-  timeStart("get horizontal and vertical ridges")
-  ridges_h, ridges_v = find_ridges(img_dark_removed, background)
-  ridges = ridges_h | ridges_v
-  timeEnd("get horizontal and vertical ridges")
+    print("\n--THRESHOLDING--")
+    timeStart("get binary image")
+    img_bin = binary_image(
+        img_dark_removed, markers_trace=ridges, markers_background=background
+    )
+    timeEnd("get binary image")
 
+    img_dark_removed = None
+    background = None
 
-  print("\n--THRESHOLDING--")
-  timeStart("get binary image")
-  img_bin = binary_image(img_dark_removed, markers_trace=ridges,
-               markers_background=background)
-  timeEnd("get binary image")
+    print("\n--SKELETONIZE--")
+    timeStart("get medial axis skeleton and distance transform")
+    img_skel, dist = medial_axis(img_bin, return_distance=True)
+    timeEnd("get medial axis skeleton and distance transform")
 
-  img_dark_removed = None
-  background = None
+    Debug.save_image("skeletonize", "skeleton", img_skel)
 
-  print("\n--SKELETONIZE--")
-  timeStart("get medial axis skeleton and distance transform")
-  img_skel, dist = medial_axis(img_bin, return_distance=True)
-  timeEnd("get medial axis skeleton and distance transform")
+    print("\n--INTERSECTIONS--")
+    intersections = find_intersections(img_bin, img_skel, dist, figure=False)
 
-  Debug.save_image("skeletonize", "skeleton", img_skel)
+    timeStart("convert to geojson")
+    intersection_json = intersections.asGeoJSON()
+    timeEnd("convert to geojson")
 
+    timeStart("saving intersections as geojson")
+    save_features(intersection_json, paths["intersections"])
+    timeEnd("saving intersections as geojson")
 
-  print("\n--INTERSECTIONS--")
-  intersections = find_intersections(img_bin, img_skel, dist, figure=False)
+    timeStart("convert to image")
+    intersection_image = intersections.asImage()
+    timeEnd("convert to image")
 
-  timeStart("convert to geojson")
-  intersection_json = intersections.asGeoJSON()
-  timeEnd("convert to geojson")
+    Debug.save_image("intersections", "intersections", intersection_image)
+    timeStart("save intersections raster")
+    intersection_image = np.array(intersection_image)
+    if not np.issubdtype(intersection_image.dtype, np.number):
+        print(
+            f"WARNING: image dtype is {intersection_image.dtype}, converting to uint8"
+        )
+        intersection_image = intersection_image.astype(np.uint8)
+    # misc.imsave(paths["intersections_raster"], intersection_image) # deprecated - saving here in case something breaks
+    imageio.imwrite(paths["intersections_raster"], intersection_image)
+    timeEnd("save intersections raster")
 
-  timeStart("saving intersections as geojson")
-  save_features(intersection_json, paths["intersections"])
-  timeEnd("saving intersections as geojson")
+    print("\n--SEGMENTS--")
+    timeStart("get segments")
+    segments, labeled_regions = get_segments(
+        img_gray,
+        img_bin,
+        img_skel,
+        dist,
+        intersection_image,
+        ridges_h,
+        ridges_v,
+        figure=True,
+    )
+    timeEnd("get segments")
 
-  timeStart("convert to image")
-  intersection_image = intersections.asImage()
-  timeEnd("convert to image")
+    timeStart("encode labels as rgb values")
+    rgb_segments = encode_labeled_image_as_rgb(labeled_regions)
+    timeEnd("encode labels as rgb values")
 
-  Debug.save_image("intersections", "intersections", intersection_image)
-  timeStart("save intersections raster")
-  intersection_image = np.array(intersection_image) 
-  if not np.issubdtype(intersection_image.dtype, np.number):
-    print(f"WARNING: image dtype is {intersection_image.dtype}, converting to uint8")
-    intersection_image = intersection_image.astype(np.uint8)
-  # misc.imsave(paths["intersections_raster"], intersection_image)
-  imageio.imwrite(paths["intersections_raster"], intersection_image)
-  timeEnd("save intersections raster")
+    rgb_segments = np.array(rgb_segments)  # ensure NumPy array
+    if rgb_segments.dtype != np.uint8:
+        print(f"Converting segment image from {rgb_segments.dtype} to uint8")
+        rgb_segments = (rgb_segments * max_val).clip(0, max_val).astype(np.uint8)
 
-  print("\n--SEGMENTS--")
-  timeStart("get segments")
-  segments, labeled_regions = \
-    get_segments(img_gray, img_bin, img_skel, dist, intersection_image,
-                 ridges_h, ridges_v, figure=True)
-  timeEnd("get segments")
+    timeStart("save segment regions")
+    # misc.imsave(paths["segment_regions"], rgb_segments) # deprecated
+    imageio.imwrite(paths["segment_regions"], rgb_segments)
+    timeEnd("save segment regions")
 
-  timeStart("encode labels as rgb values")
-  rgb_segments = encode_labeled_image_as_rgb(labeled_regions)
-  timeEnd("encode labels as rgb values")
+    timeStart("convert centerlines to geojson")
+    segments_as_geojson = segments_to_geojson(segments)
+    timeEnd("convert centerlines to geojson")
 
-  rgb_segments = np.array(rgb_segments)  # ensure NumPy array
-  if rgb_segments.dtype != np.uint8:
-      print(f"Converting segment image from {rgb_segments.dtype} to uint8")
-      rgb_segments = (rgb_segments * 255).clip(0, 255).astype(np.uint8)
+    timeStart("saving centerlines as geojson")
+    save_features(segments_as_geojson, paths["segments"])
+    timeEnd("saving centerlines as geojson")
 
-  timeStart("save segment regions")
-  # misc.imsave(paths["segment_regions"], rgb_segments)
-  imageio.imwrite(paths["segment_regions"], rgb_segments)
-  timeEnd("save segment regions")
+    # TODO: fix the return logic below
+    # return (img_gray, ridges, img_bin, intersections, img_seg)
+    # return segments
+    # detect center lines
 
-  timeStart("convert centerlines to geojson")
-  segments_as_geojson = segments_to_geojson(segments)
-  timeEnd("convert centerlines to geojson")
+    # connect segments
 
-  timeStart("saving centerlines as geojson")
-  save_features(segments_as_geojson, paths["segments"])
-  timeEnd("saving centerlines as geojson")
+    # output data
 
-  #return (img_gray, ridges, img_bin, intersections, img_seg)
-  # return segments
-  # detect center lines
+    time_elapsed = timeEnd("get all metadata")
 
-  # connect segments
+    Record.record("time_elapsed", float("%.2f" % time_elapsed))
 
-  # output data
+    if stats_file:
+        Record.export_as_json(stats_file)
 
-  time_elapsed = timeEnd("get all metadata")
+    # TODO: refactor this into some sort of status module.
+    # For now, since this is our only problematic status,
+    # it's hard to know what to generalize. Eventually
+    # we might want to flag several different statuses
+    # for specific conditions.
+    max_segments_reasonable = image_processing['max_segments_reasonable']
+    if len(segments) > max_segments_reasonable:
+        print("STATUS>>>problematic<<<")
+    else:
+        print("STATUS>>>complete<<<")
 
-  Record.record("time_elapsed", float("%.2f" % time_elapsed))
-
-  if (stats_file):
-    Record.export_as_json(stats_file)
-
-  # TODO: refactor this into some sort of status module.
-  # For now, since this is our only problematic status,
-  # it's hard to know what to generalize. Eventually
-  # we might want to flag several different statuses
-  # for specific conditions.
-  max_segments_reasonable = 11000
-  if (len(segments) > max_segments_reasonable):
-    print("STATUS>>>problematic<<<")
-  else:
-    print("STATUS>>>complete<<<")
 
 def main():
     """Main entry point for the get_all_metadata CLI."""
@@ -242,5 +296,6 @@ def main():
     else:
         print(arguments)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
