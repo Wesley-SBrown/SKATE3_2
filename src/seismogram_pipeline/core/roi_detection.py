@@ -137,8 +137,15 @@ def get_box_lines(boundary, image=None, min_separation_distance=5, min_separatio
     
     timeEnd("get hough lines")
 
-    hough_lines["bottom"] += [0, half_height]
-    hough_lines["right"] += [half_width, 0]
+    # hough_lines["bottom"] += [0, half_height]
+    # hough_lines["right"] += [half_width, 0]
+
+    # check if hough lines are valid before attempting to shift
+    if hough_lines.get('bottom') is not None and len(hough_lines['bottom']) > 0:
+        hough_lines['bottom'] = np.array(hough_lines['bottom']) + [0, half_height]
+
+    if hough_lines.get('right') is not None and len(hough_lines['right']) > 0:
+        hough_lines['right'] = np.array(hough_lines['right']) + [half_width, 0]
 
     print("found these hough lines:")
     print(hough_lines)
@@ -159,13 +166,31 @@ def get_box_lines(boundary, image=None, min_separation_distance=5, min_separatio
 
 
 def get_corners(lines, image=None):
+    # perform check for missing boundary lines
+    missing_lines = any(
+        lines.get(border) is None or len(lines[border]) == 0
+        for border in ["left", "right", "top", "bottom"]
+    )
+
     timeStart("find intersections")
-    corners = {
-        "top_left": seg_intersect(lines["top"], lines["left"]),
-        "top_right": seg_intersect(lines["top"], lines["right"]),
-        "bottom_left": seg_intersect(lines["bottom"], lines["left"]),
-        "bottom_right": seg_intersect(lines["bottom"], lines["right"]),
-    }
+    if missing_lines:
+        print("[WARNING] Could not detect all boundary lines. Falling back on image boundaries")
+        h, w = image.shape[:2]
+
+        # use image boundaries for fallback boundaries
+        corners = {
+            "top_left": np.array([0,0]),
+            "top_right": np.array([w-1, 0]),
+            "bottom_left": np.array([0, h-1]),
+            "bottom_right": np.array([w-1, h-1]),
+        }
+    else:
+        corners = {
+            "top_left": seg_intersect(lines["top"], lines["left"]),
+            "top_right": seg_intersect(lines["top"], lines["right"]),
+            "bottom_left": seg_intersect(lines["bottom"], lines["left"]),
+            "bottom_right": seg_intersect(lines["bottom"], lines["right"]),
+        }
 
     # turn corners into tuples of the form (x, y), where x and y are integers
     corners = {

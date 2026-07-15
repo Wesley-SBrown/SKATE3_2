@@ -25,6 +25,9 @@ def get_best_hough_lines(
         min_angle=min_separation_angle,
     )
 
+    if len(peak_hough) == 0:
+        return []
+    
     best_hough_idx = np.argmax(peak_hough)
     line = get_line_endpoints_in_image(
         image, peak_angles[best_hough_idx], peak_distances[best_hough_idx]
@@ -36,6 +39,10 @@ def get_all_hough_lines(
     image, min_angle, max_angle, min_separation_distance, min_separation_angle, 
     angular_step=0.5, num_peaks=150, threshold_factor=2,
 ):
+
+    # coerce floats to ints - SciPy requirement
+    min_separation_distance = int(round(min_separation_distance))
+    min_separation_angle = int(round(min_separation_angle))
 
     angles = np.deg2rad(np.arange(min_angle, max_angle, angular_step))
     hough, angles, distances = hough_line(image, angles)
