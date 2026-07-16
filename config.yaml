@@ -44,7 +44,7 @@ pipeline_settings:
   hough_lines:
     angular_step_deg: 0.5         # Angular resolution in degrees for the search matrix
     num_peaks: 150                # Maximum number of prominent lines to identify
-    threshold_factor: 2           # Multiplier applied to the accumulator threshold
+    threshold_factor: 0.2           # Multiplier applied to the accumulator threshold
 
   # Logic for handling crossing or overlapping trace lines
   intersection_detection:

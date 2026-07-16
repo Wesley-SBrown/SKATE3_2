@@ -9,7 +9,7 @@ from .utilities import normalize
 
 def get_best_hough_lines(
     image, min_angle, max_angle, min_separation_distance, min_separation_angle, angular_step=0.5,
-    num_peaks=150, threshold_factor=2
+    num_peaks=150, threshold_factor=0.2
 ):
 
     angles = np.deg2rad(np.arange(min_angle, max_angle, angular_step))
