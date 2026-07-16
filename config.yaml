@@ -56,7 +56,7 @@ pipeline_settings:
     base_small_object_size: 500   # Artifacts smaller than this pixel area are filtered out
     base_trace_spacing: 150       # Expected vertical spacing in pixels between parallel traces
     angle_padding_deg: 2.0        # Angular tolerance allowed when matching trace directions
-    min_separation_angle_deg: 5.0 # Minimum angle required to distinguish two separate lines
+    min_separation_angle_deg: 5   # Minimum angle required to distinguish two separate lines
     separation_distance_ratio: 0.6667 # Ratio used to determine minimum distance between paths (2.0 / 3)
 
   # Mitchell's Best-Candidate algorithm for even random sampling distributions
