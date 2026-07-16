@@ -82,10 +82,23 @@ def get_hough_lines(
     )
 
 
-def get_box_lines(boundary, image=None, min_separation_distance=5, min_separation_angle=5):
+def get_box_lines(
+    boundary, 
+    image=None, 
+    min_separation_distance=5, 
+    min_separation_angle=5,
+    angles = None
+):
     height, width = boundary.shape
     [half_width, half_height] = np.floor([0.5 * width, 0.5 * height]).astype(int)
 
+    if angles is None:
+        angles = {
+            "vertical_min": -10,
+            "vertical_max": 10,
+            "horizontal_min": -120,
+            "horizontal_max": -70
+        }
     timeStart("split image")
     image_regions = {
         "left": boundary[0:height, 0:half_width],
@@ -100,8 +113,8 @@ def get_box_lines(boundary, image=None, min_separation_distance=5, min_separatio
         "left": np.array(
             get_hough_lines(
                 image_regions["left"], 
-                min_angle=-10, 
-                max_angle=10,
+                min_angle=angles.get("vertical_min", -10), 
+                max_angle=angles.get("vertical_max", 10),
                 min_separation_distance=min_separation_distance,
                 min_separation_angle=min_separation_angle
             )
@@ -109,8 +122,8 @@ def get_box_lines(boundary, image=None, min_separation_distance=5, min_separatio
         "right": np.array(
             get_hough_lines(
                 image_regions["right"], 
-                min_angle=-10, 
-                max_angle=10,
+                min_angle=angles.get("vertical_min", -10), 
+                max_angle=angles.get("vertical_max", 10),
                 min_separation_distance=min_separation_distance,
                 min_separation_angle=min_separation_angle
             )
@@ -118,8 +131,8 @@ def get_box_lines(boundary, image=None, min_separation_distance=5, min_separatio
         "top": np.array(
             get_hough_lines(
                 image_regions["top"], 
-                min_angle=-120, 
-                max_angle=-70,
+                min_angle=angles.get("horizontal_min", -120), 
+                max_angle=angles.get("horizontal_max", -70),
                 min_separation_distance=min_separation_distance,
                 min_separation_angle=min_separation_angle
             )
@@ -127,8 +140,8 @@ def get_box_lines(boundary, image=None, min_separation_distance=5, min_separatio
         "bottom": np.array(
             get_hough_lines(
                 image_regions["bottom"], 
-                min_angle=-120, 
-                max_angle=-70,
+                min_angle=angles.get("horizontal_min", -120), 
+                max_angle=angles.get("horizontal_max", -70),
                 min_separation_distance=min_separation_distance,
                 min_separation_angle=min_separation_angle 
             )
@@ -246,11 +259,19 @@ def get_corners(lines, image=None):
     return corners
 
 
-def get_roi(image, scale, config: dict = None):
-    base_trace_width = config.get('base_trace_width')
-    min_separation_angle = config.get('min_separation_angle')
+def get_roi(image, scale, config: dict = {}):
+    base_trace_width = config.get('base_trace_width', 17)
+    min_separation_distance = config.get('min_separation_distance', 5)
+    min_separation_angle = config.get('min_separation_angle', 5)
+    angles_config = config.get('angles')
     boundary = get_boundary(image, scale=scale, base_trace_width=base_trace_width)
-    lines = get_box_lines(boundary, image=image, )
+    lines = get_box_lines(
+        boundary, 
+        image=image,
+        min_separation_distance=min_separation_distance,
+        min_separation_angle=min_separation_angle,
+        angles=angles_config)
+    
     corners = get_corners(lines, image=image)
     return corners
 
