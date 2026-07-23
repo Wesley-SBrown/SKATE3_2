@@ -3,7 +3,7 @@ import csv
 import numpy as np
 from .timer import timeStart, timeEnd
 from geojson import Feature, FeatureCollection, LineString
-from typing import Any, Union # Union needed for <=3.9
+from typing import Any, Union 
 
 
 def get_endpoint_data(
@@ -34,9 +34,7 @@ def get_endpoint_data(
 
     timeStart("get coordinates")
     for feature in features["features"]:
-        coordinates = np.array(
-            feature["geometry"]["coordinates"]
-        )  # turn the list of coords into a fancy 2D numpy array
+        coordinates = np.array(feature["geometry"]["coordinates"])  # turn the list of coords into a fancy 2D numpy array
         all_x.append(
             coordinates[:, 0]
         )  # numpy arrays are indexed [row, column], so [:, 0] means "all rows, 0th column"

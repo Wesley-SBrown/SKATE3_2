@@ -1,17 +1,56 @@
-from .debug import Debug
-from .stats_recorder import Record
-
+from typing import Union
 import numpy as np
+import numpy.typing as npt
 import os, yaml
 from skimage.transform import hough_line, hough_line_peaks
-from .utilities import normalize
 
+from .debug import Debug
+from .utilities import normalize
+from .stats_recorder import Record
+
+# type aliases for reusability
+Point2D = tuple[int, int]
+LineEndpoints = tuple[Point2D, Point2D]
 
 def get_best_hough_lines(
-    image, min_angle, max_angle, min_separation_distance, min_separation_angle, angular_step=0.5,
-    num_peaks=150, threshold_factor=0.2
-):
+    image: npt.NDArray[np.number],
+    min_angle: float, 
+    max_angle: float, 
+    min_separation_distance: Union[int, float], 
+    min_separation_angle: Union[int, float], 
+    angular_step: float = 0.5,
+    num_peaks: int = 150,
+    threshold_factor: float = 0.2
+) -> Union[LineEndpoints, list[LineEndpoints]]:
+    """
+    Detects Hough Lines and returns the best matching line endpoints
 
+    Parameters
+    ----------
+    image : NumPy array of numbers
+        A 2-D binary or grayscale input image array
+    min_angle : float
+        Minimum search angle (degrees)
+    max_angle : float
+        Maximum search angle (degrees)
+    min_separation_distance : int or float
+        Minimum distance (pixels) separating detected peaks in the accumulator
+    min_separation_angle : int or float
+        Minimum angle (degrees) separating detected peaks in the accumulator
+    angular_step : float, default 0.5
+        Angular step size (degrees) for generating search angles
+    num_peaks : int, default 150
+        Maximum number of peaks to consider from the Hough accumulator
+    threshold_factor : float, default 0.2
+        Fraction of the maximum accumulator value
+        Used as minimum peak threshold
+    
+    Returns
+    -------
+    line : LineEndpoints or list[LineEndpoints]
+        Endpoints `((x0, y0), (x1, y1))` of the strongest line peak
+        Empty list if no peaks detected
+    """
     angles = np.deg2rad(np.arange(min_angle, max_angle, angular_step))
     hough, angles, distances = hough_line(image, angles)
 
@@ -22,7 +61,7 @@ def get_best_hough_lines(
         num_peaks=num_peaks,
         threshold=threshold_factor * np.amax(hough),
         min_distance=min_separation_distance,
-        min_angle=min_separation_angle,
+        min_angle=min_separation_angle
     )
 
     if len(peak_hough) == 0:
@@ -36,9 +75,45 @@ def get_best_hough_lines(
 
 
 def get_all_hough_lines(
-    image, min_angle, max_angle, min_separation_distance, min_separation_angle, 
-    angular_step=0.5, num_peaks=150, threshold_factor=0.2,
-):
+    image: npt.NDArray[np.number], 
+    min_angle: float,
+    max_angle: float, 
+    min_separation_distance: Union[int, float], 
+    min_separation_angle: Union[int, float], 
+    angular_step: float = 0.5,
+    num_peaks: int = 150,
+    threshold_factor: float = 0.2
+)-> list[LineEndpoints]:
+    """
+    Detects Hough Lines and returns endpoints for all peaks found
+
+    Parameters
+    ----------
+    image : NumPy array of numbers
+        2-D binary or grayscale image array
+    min_angle : float
+        Minimum search angle (degrees)
+    max_angle : float
+        Maximum search angle (degrees)
+    min_separation_distance : int or float
+        Minimum distance (pixels) separating detected peaks in the accumulator
+    min_separation_angle : int or float
+        Minimum angle (degrees) separating detected peaks in the accurmulator
+    angular_step : float, default 0.5
+        Angular step size (degrees) for generating search angles
+    num_peaks : int, default 150
+        Maximum number of peaks to consider from the Hough accumulator
+    threshold_factor : float, default 0.2
+        Fraction of the maximum accumulator value
+        Used as minimum peak threshold
+    
+    Returns
+    -------
+    lines : list[LineEndpoints]
+        A list of coordinate tuples `[((x0, y0), (x1, y1)), ...]` representing 
+        all detected line endpoints.
+    
+    """
 
     # coerce floats to ints - SciPy requirement
     min_separation_distance = int(round(min_separation_distance))
@@ -97,7 +172,25 @@ def get_all_hough_lines(
     return lines
 
 
-def bin_hough(hough, rho_bin_size):
+def bin_hough(
+    hough: npt.NDArray[np.number],
+    rho_bin_size: int
+) -> npt.NDArray[np.number]:
+    """
+    Bins the hough accumulator matrix along the rho axis
+
+    Parameters
+    ----------
+    hough : NumPy array of numbers
+        2-D Hough transform accumulator array (rho x theta)
+    rho_bin_size : int
+        Number of consecutive rho bins to aggregate
+
+    Returns
+    -------
+    binned_hough : NumPy array of numbers
+        2-D array representing the downsampled accumulator matrix along rho axis
+    """
     binned_hough = np.zeros([int(hough.shape[0] / rho_bin_size), hough.shape[1]])
     for rho in range(0, binned_hough.shape[0]):
         slice_start = rho * rho_bin_size
@@ -106,10 +199,26 @@ def bin_hough(hough, rho_bin_size):
     return binned_hough
 
 
-def get_max_theta_idx(hough, threshold_factor=0.2):
+def get_max_theta_idx(
+    hough: npt.NDArray[np.number], 
+    threshold_factor: float = 0.2
+) -> int:
     """
     Returns the column (theta) of the hough transform with the
     most above-threshold bins.
+
+    Parameters
+    ----------
+    hough : NumPy array of numbers
+        2-D Hough transform accumulator array (rho x theta)
+    threshold_factor : float
+        Fraction of the maximum accumulator value
+        Used as a threshold cutoff
+    
+    Returns
+    -------
+    max_theta_idx : int
+        Angle column index corresponding to the peak count of threshold bins
 
     """
     thresh_hough = threshold_hough(hough, threshold_factor * np.amax(hough))
@@ -120,7 +229,26 @@ def get_max_theta_idx(hough, threshold_factor=0.2):
     return max_theta_idx
 
 
-def threshold_hough(hough, threshold):
+def threshold_hough(
+    hough: npt.NDArray[np.number], 
+    threshold: float
+) -> npt.NDArray[np.number]:
+    """
+    Applies a binary threshold mask to a Hough transform accumulator matrix
+
+    Parameters
+    ----------
+    hough : NumPy array of numbers
+        2-D Hough transform accumulator array (rho x theta)
+    threshold : float
+        Cutoff intensity value. Bins below this threshold are set to 0
+        Bins at or above are set to 1
+
+    Returns
+    -------
+    thresh_hough : NumPy array of numbers
+        A binary 2-D array representing the thresholded accumulator matrix
+    """
     thresh_hough = np.copy(hough)
     thresh_hough[hough < threshold] = 0
     thresh_hough[hough >= threshold] = 1
@@ -176,7 +304,31 @@ Tried doing some fancier stuff with the hough accumulator matrix here, but it di
 #   return [ get_line_endpoints_in_image(image, angle, radius) for angle, radius in zip(peak_angles, peak_distances)]
 
 
-def get_line_endpoints_in_image(image, angle, radius):
+def get_line_endpoints_in_image(
+    image: npt.NDArray[np.number], 
+    angle: float, 
+    radius: float
+) -> LineEndpoints:
+    """
+    Calculates the boundary endpoint coordinates of a line in the image frame
+
+    Uses polar parametrization to determine where a detected line intersects the
+    boundary of an image
+
+    Parameters
+    ----------
+    image : NumPy array of numbers
+        A 2-D reference image array used to derive boundary bounds (rows x columns).
+    angle : float
+        Line angle (radians).
+    radius : float
+        Distance from origin $(r)$ in pixels.
+
+    Returns
+    -------
+    endpoints : LineEndpoints
+        A tuple of integer coordinate pairs `((x0, y0), (x1, y1))` bounding the line.
+    """
     rows, cols = image.shape
     # from r = y * sin(theta) + x cos(theta)
     if np.sin(angle) == 0:

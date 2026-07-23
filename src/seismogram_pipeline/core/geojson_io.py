@@ -1,11 +1,25 @@
 import geojson
+from geojson import FeatureCollection
 import json
 from .debug import Debug
 import numpy as np
+from typing import Any
 
+def convert_numpy(obj: Any) -> Any:
+    """
+    Convert input object data type(s) from NumPy to built-in types
 
-def convert_numpy(obj):
-    if isinstance(obj, dict):
+    Parameters
+    ----------
+    obj : Any
+        Object of a NumPy type
+
+    Returns
+    -------
+    obj : Any
+        object of standard python built-in type(s)
+    """
+    if isinstance(obj, dict): 
         return {k: convert_numpy(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy(v) for v in obj]
@@ -19,14 +33,41 @@ def convert_numpy(obj):
         return obj
 
 
-def get_features(filename):
+def get_features(filename: str) -> FeatureCollection:
+    """
+    Retrieves the features from a given input file
+
+    Parameters
+    ----------
+    filename : str
+        Input file name
+
+    Returns
+    -------
+    features : FeatureCollection
+        GeoJSON Feature Collection from file
+    """
     with open(filename, "r") as myfile:
         data = myfile.read()
         features = geojson.loads(data)
         return features
 
 
-def save_features(features, filename):
+def save_features(
+    features: FeatureCollection, 
+    filename: str
+) -> None:
+
+    """
+    Writes a GeoJSON feature collection to the output filename
+
+    Parameters
+    ----------
+    features : FeatureCollection
+        Input GeoJSON feature collection
+    filename : str
+        Output file name
+    """
     if Debug.active:
         indent = 2
     else:
@@ -37,7 +78,17 @@ def save_features(features, filename):
         geojson.dump(convert_numpy(features), outfile, indent=indent)
 
 
-def save_json(dict, filename):
+def save_json(dict: dict, filename: str) -> None:
+    """
+    Writes a dictionary object to the input filename
+
+    Parameters
+    ----------
+    dict : dict
+        Input dictionary object
+    filename : str
+        Ouput file name
+    """
     if Debug.active:
         indent = 2
     else:
