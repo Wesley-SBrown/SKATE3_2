@@ -33,7 +33,7 @@ def get_endpoints(segments_file: str, out_file: str) -> None:
     get_endpoint_data,
     generate_geojson,
     write_geojson,
-    write_csv,
+    write_csv
   )
 
   features = get_features(filename=segments_file)
