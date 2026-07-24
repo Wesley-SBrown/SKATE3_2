@@ -38,7 +38,7 @@ def get_segment_assignments(
   from ..core.timer import timeStart, timeEnd
   from ..core.segment_assignment import (
     assign_segments_to_meanlines,
-    save_assignments_as_json,
+    save_assignments_as_json
   )
 
   timeStart("get segment assignments")
@@ -60,7 +60,7 @@ def get_segment_assignments(
   )
   timeEnd("segment assignment")
 
-  # save to ouput JSON file
+  # save to output JSON file
   save_assignments_as_json(data=assignments, filepath=out_file)
 
   timeEnd("get segment assignments")
