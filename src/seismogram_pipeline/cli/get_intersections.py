@@ -97,7 +97,7 @@ def get_intersections(
   timeEnd("saving to " + out_file)
 
   if isinstance(debug_dir, str):
-    # safe platform-agnositc path combining
+    # safe platform-agnostic path combining
     debug_filename = storage_config["pipeline_outputs"].get(
       "intersections_raster", "intersections.png"
     )
