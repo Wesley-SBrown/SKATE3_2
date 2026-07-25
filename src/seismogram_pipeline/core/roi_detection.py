@@ -251,10 +251,10 @@ def get_corners(lines, image=None):
         )
 
         Record.record("roi_area", roi_area)
-        Record.record("roi_angle_top", float("%.4f" % roi_angle_top))
-        Record.record("roi_angle_bottom", float("%.4f" % roi_angle_bottom))
-        Record.record("roi_angle_left", float("%.4f" % roi_angle_left))
-        Record.record("roi_angle_right", float("%.4f" % roi_angle_right))
+        Record.record("roi_angle_top", float(f"{roi_angle_top:.4f}"))
+        Record.record("roi_angle_bottom", float(f"{roi_angle_bottom:.4f}"))
+        Record.record("roi_angle_left", float(f"{roi_angle_left:.4f}"))
+        Record.record("roi_angle_right", float(f"{roi_angle_right:.4f}"))
 
     return corners
 

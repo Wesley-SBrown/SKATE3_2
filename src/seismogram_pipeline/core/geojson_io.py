@@ -29,6 +29,8 @@ def convert_numpy(obj: Any) -> Any:
         return float(obj)
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
     else:
         return obj
 
@@ -78,13 +80,13 @@ def save_features(
         geojson.dump(convert_numpy(features), outfile, indent=indent)
 
 
-def save_json(dict: dict, filename: str) -> None:
+def save_json(data: dict[str, Any], filename: str) -> None:
     """
     Writes a dictionary object to the input filename
 
     Parameters
     ----------
-    dict : dict
+    data : dict
         Input dictionary object
     filename : str
         Ouput file name
@@ -95,4 +97,4 @@ def save_json(dict: dict, filename: str) -> None:
         indent = None
 
     with open(filename, "w") as outfile:
-        json.dump(dict, outfile, indent=indent)
+        json.dump(data, outfile, indent=indent)

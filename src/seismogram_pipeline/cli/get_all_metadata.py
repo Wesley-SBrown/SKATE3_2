@@ -264,7 +264,7 @@ def analyze_image(
 
     time_elapsed = timeEnd("get all metadata")
 
-    Record.record("time_elapsed", float("%.2f" % time_elapsed))
+    Record.record("time_elapsed", float(f"{time_elapsed:.2f}"))
 
     if stats_file:
         Record.export_as_json(stats_file)

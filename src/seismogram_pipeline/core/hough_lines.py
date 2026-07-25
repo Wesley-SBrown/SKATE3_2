@@ -13,7 +13,7 @@ Point2D = tuple[int, int]
 LineEndpoints = tuple[Point2D, Point2D]
 
 def get_best_hough_lines(
-    image: npt.NDArray[np.number],
+    image: npt.NDArray[np.generic],
     min_angle: float, 
     max_angle: float, 
     min_separation_distance: Union[int, float], 
@@ -75,7 +75,7 @@ def get_best_hough_lines(
 
 
 def get_all_hough_lines(
-    image: npt.NDArray[np.number], 
+    image: npt.NDArray[np.generic], 
     min_angle: float,
     max_angle: float, 
     min_separation_distance: Union[int, float], 
@@ -164,18 +164,18 @@ def get_all_hough_lines(
         average_meanline_angle = np.mean(peak_angles)
         std_deviation_meanline_angle = np.std(peak_angles)
 
-        Record.record("average_meanline_angle", float("%.4f" % average_meanline_angle))
+        Record.record("average_meanline_angle", float(f"{average_meanline_angle:.4f}"))
         Record.record(
-            "std_deviation_meanline_angle", float("%.4f" % std_deviation_meanline_angle)
+            "std_deviation_meanline_angle", float(f"{std_deviation_meanline_angle:.4f}")
         )
 
     return lines
 
 
 def bin_hough(
-    hough: npt.NDArray[np.number],
+    hough: npt.NDArray[np.generic],
     rho_bin_size: int
-) -> npt.NDArray[np.number]:
+) -> npt.NDArray[np.generic]:
     """
     Bins the hough accumulator matrix along the rho axis
 
@@ -200,7 +200,7 @@ def bin_hough(
 
 
 def get_max_theta_idx(
-    hough: npt.NDArray[np.number], 
+    hough: npt.NDArray[np.generic], 
     threshold_factor: float = 0.2
 ) -> int:
     """
@@ -230,9 +230,9 @@ def get_max_theta_idx(
 
 
 def threshold_hough(
-    hough: npt.NDArray[np.number], 
+    hough: npt.NDArray[np.generic], 
     threshold: float
-) -> npt.NDArray[np.number]:
+) -> npt.NDArray[np.generic]:
     """
     Applies a binary threshold mask to a Hough transform accumulator matrix
 
@@ -305,7 +305,7 @@ Tried doing some fancier stuff with the hough accumulator matrix here, but it di
 
 
 def get_line_endpoints_in_image(
-    image: npt.NDArray[np.number], 
+    image: npt.NDArray[np.generic], 
     angle: float, 
     radius: float
 ) -> LineEndpoints:
@@ -333,8 +333,8 @@ def get_line_endpoints_in_image(
     # from r = y * sin(theta) + x cos(theta)
     if np.sin(angle) == 0:
         # vertical line at x = radius
-        x0 = radius.astype(int)
-        x1 = radius.astype(int)
+        x0 = int(radius)
+        x1 = int(radius)
         y0 = 0
         y1 = rows - 1
     else:
