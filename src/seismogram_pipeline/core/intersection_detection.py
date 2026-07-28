@@ -447,11 +447,10 @@ def draw_circle(
     rr, cc = circle(coords[0], coords[1], radius, shape=image.shape)
     image[rr, cc] = True
 
-
 def expand_junctions(
     image: npt.NDArray[np.bool_], 
     junctions: list[tuple[int, int]], 
-    radii: list[np.float_]
+    radii: list[np.float64]
 ) -> None:
     """
     Expands the 1-pixel junctions into circular regions.
