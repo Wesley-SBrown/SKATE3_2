@@ -1,3 +1,7 @@
+"""
+Helper functions for image handling
+"""
+
 from skimage import io, img_as_float
 
 

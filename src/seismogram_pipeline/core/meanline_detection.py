@@ -11,8 +11,40 @@ import skimage.draw as skidraw
 from skimage.color import gray2rgb
 import numpy.ma as ma
 import geojson
+import numpy.typing as npt
+from typing import Any
 
-def detect_meanlines(masked_image, corners, scale=1, config: dict = None):
+# type aliases for reusability
+Point2D = tuple[int, int]
+LineEndpoints = tuple[Point2D, Point2D]
+
+def detect_meanlines(
+    masked_image: np.ma.MaskedArray, 
+    corners: dict[str, tuple[Any, ...]], 
+    scale: int = 1, 
+    config: dict = None
+) -> list[LineEndpoints]:
+    """
+    Detects and extracts meanlines within a specified ROI of an image
+
+    This function crops the image's region of interest based on the provided coords & padding.
+    Otsu's thresholding is then applied and small objects are filtered out
+    Hough transform determines the parallel lines (meanlines).
+
+    Parameters
+    ----------
+    masked_image : MaskedArray
+        Input image tranformed into a numpy masked array
+    corners : dict[str, tuple[Any, ...]]
+        Dictionary of key-defined corners of the image
+    scale : int, optional, default 1
+        Scaling factor applied to adjust trace spacing, padding, and object size thresholds
+    
+    Returns
+    -------
+    line : list[LineEndpoints]
+        List of detected lines
+    """
     trace_spacing = lambda scale: int(config.get('base_trace_spacing') * scale)
     padding = trace_spacing(scale) / 2
 
@@ -100,7 +132,24 @@ def detect_meanlines(masked_image, corners, scale=1, config: dict = None):
     return lines
 
 
-def meanlines_to_geojson(lines):
+def meanlines_to_geojson(
+    lines: list[LineEndpoints]
+) -> geojson.FeatureCollection:
+    """"
+    Converts a list of meanlines into a geojson FeatureCollection
+    
+    Parameters
+    ----------
+    lines: list[LineEndpoints]
+        A list of line segments, where each line is represented
+        as a tuple of two 2D points ((x1, y1), (x2, y2)).
+    
+    Returns
+    -------
+    newFeature : FeatureCollection
+        GeoJSON collection of Features containing all the input lines
+
+    """
     lines = [
         geojson.Feature(geometry=geojson.LineString(line), id=idx)
         for idx, line in enumerate(lines)
