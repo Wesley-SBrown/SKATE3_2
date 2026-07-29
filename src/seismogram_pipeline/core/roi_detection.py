@@ -290,3 +290,21 @@ def corners_to_geojson(corners):
     )
     newFeature = geojson.Feature(geometry=newPolygon)
     return newFeature
+
+# reverse helper function
+def geojson_to_corners(feature):
+    if isinstance(feature, dict):
+        geometry = feature.get("geometry", feature)
+    else:
+        geometry = getattr(feature, "geometry", feature)
+
+    coords = geometry["coordinates"][0] if isinstance(geometry, dict) else geometry.coordinates[0]
+
+    corners = {
+        "top_left": tuple(coords[0]),
+        "top_right": tuple(coords[1]),
+        "bottom_right": tuple(coords[2]),
+        "bottom_left": tuple(coords[3]),
+    }
+
+    return corners
