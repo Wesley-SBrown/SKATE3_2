@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# Detect user container engine 
+# Automatically detect user container engine 
 if command -v podman &> /dev/null; then
     ENGINE="podman"
     # NOTE: Podman on Linux needs ':z' for SELinux volume security contexts
@@ -13,6 +13,11 @@ else
     VOL_SUFFIX=""
     IMAGE="seismogram-pipeline"
 fi
+
+# Uncomment to mannually select the engine 
+# ENGINE="docker"
+# VOL_SUFFIX=""
+# IMAGE="seismogram-pipeline"
 
 echo "==> Using container engine: $ENGINE"
 

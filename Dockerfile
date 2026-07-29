@@ -22,11 +22,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy config & metadata
 COPY pyproject.toml README.md config.yaml ./
 
-# Dummy src folder so setuptools doesn't crash during dependency-only install
+# Dummy src folder to prevent setup tools from crashing
 RUN mkdir -p src/seismogram_pipeline && touch src/seismogram_pipeline/__init__.py
 
 # Install dependencies using uv
-# Use a persistent cache mount for fast rebuilds
+# Persistent cache mount allows for fast rebuilds
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --system --no-cache .
 
@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Stage 2: Production stage
 
 # Define Python Parent Image
-FROM python:3.9-slim
+FROM python:3.9-slim AS runner
 
 WORKDIR /app
 
