@@ -18,9 +18,10 @@ Options:
   --debug <directory>  Save intermediate steps as images for inspection in <directory>.
 
 """
-import os, yaml
+import yaml
 from docopt import docopt
 from typing import Union
+from pathlib import Path
 
 def get_meanlines(
     in_file: str, out_file: str, roi_file: str,
@@ -43,10 +44,20 @@ def get_meanlines(
         Flag whether to save intermediate images
     """
 
-    CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.json'))
+    CONFIG_PATH = (Path(__file__)
+        .resolve()
+        .parents[3]
+        / "config.yaml"
+    )
 
     with open(CONFIG_PATH, "r") as f:
-        storage_config = yaml.safe_load(f)['storage']
+        config = yaml.safe_load(f)
+
+    storage_config = config.get('storage', {})
+    pipeline_settings = config.get('pipeline_settings', {})
+
+    inputs_dir = storage_config.get("inputs_dir", "data/inputs")
+    outputs_dir = storage_config.get("outputs_dir", "data/outputs")
 
     if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
@@ -63,20 +74,42 @@ def get_meanlines(
     from ..core.geojson_io import get_features, save_features
     from ..core.polygon_mask import mask_image
     from ..core.meanline_detection import detect_meanlines, meanlines_to_geojson
+    from ..core.roi_detection import geojson_to_corners
 
     timeStart("get meanlines")
 
     timeStart("read image")
-    image = get_image(in_file)
+    input_path = (
+        Path(__file__)
+            .resolve()
+            .parents[3]
+            .joinpath(inputs_dir, in_file)
+    )
+    image = get_image(input_path)
     timeEnd("read image")
 
-    roi_polygon = get_features(roi_file)["geometry"]["coordinates"][0]
+    roi_path = (
+        Path(__file__)
+            .resolve()
+            .parents[3]
+            .joinpath(outputs_dir, roi_file)
+    )
+
+    roi_features = get_features(roi_path)
+    roi_polygon = roi_features["geometry"]["coordinates"][0]
+
+    corners = geojson_to_corners(roi_features)
 
     timeStart("mask image")
     masked_image = mask_image(image, roi_polygon)
     timeEnd("mask image")
 
-    meanlines = detect_meanlines(masked_image, scale=scale)
+    meanlines = detect_meanlines(
+        masked_image, 
+        corners=corners, 
+        scale=scale,
+        config=pipeline_settings.get("meanline_detection")
+    )
 
     timeStart("convert to geojson")
     meanlines_as_geojson = meanlines_to_geojson(meanlines)
@@ -84,11 +117,17 @@ def get_meanlines(
 
     # config default fallback
     if not out_file:
-        out_file = os.path.join(storage_config.get("outputs_dir", "data/outputs"),
-                                storage_config['pipeline_outputs']['meanlines'])
+        out_file = storage_config.get('pipeline_outputs', {}).get('meanlines', 'meanlines.json')
+
+    output_path = (
+        Path(__file__)
+            .resolve()
+            .parents[3]
+            .joinpath(outputs_dir, out_file)
+    )
 
     timeStart("saving as geojson")
-    save_features(meanlines_as_geojson, out_file)
+    save_features(meanlines_as_geojson, output_path)
     timeEnd("saving as geojson")
 
     timeEnd("get meanlines")
