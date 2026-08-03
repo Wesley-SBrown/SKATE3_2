@@ -17,6 +17,8 @@ Options:
 """
 from docopt import docopt
 from typing import Union
+import yaml
+from pathlib import Path
 
 def get_roi(
     in_file: str, out_file: str, 
@@ -36,6 +38,21 @@ def get_roi(
     debug_dir: str | bool, default False
         Flag whether to save intermediate images
     """
+
+    CONFIG_PATH = (Path(__file__)
+            .resolve()
+            .parents[3]
+            / "config.yaml"
+        )
+    
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)
+
+    storage_config = config.get('storage', {})
+    pipeline_settings = config.get('pipeline_settings', {})
+
+    inputs_dir = storage_config.get("inputs_dir", "data/inputs")
+    outputs_dir = storage_config.get("outputs_dir", "data/outputs")
     
     if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
@@ -44,16 +61,25 @@ def get_roi(
 
     from ..core.timer import timeStart, timeEnd
     from ..core.load_image import get_image
-    from ..core.roi_detection import get_roi, corners_to_geojson
+    from ..core.roi_detection import get_roi as core_roi, corners_to_geojson
     from ..core.geojson_io import save_features
 
     timeStart("ROI")
 
     timeStart("read image")
-    image = get_image(in_file)
+    input_path = (
+        Path(__file__)
+        .resolve()
+        .parents[3]
+        .joinpath(inputs_dir, in_file)
+
+    )
+    image = get_image(input_path)
     timeEnd("read image")
 
-    corners = get_roi(image, scale=scale)
+    corners = core_roi(
+        image, scale=scale,
+        config=pipeline_settings.get("roi_detection"))
 
     timeStart("convert to geojson")
     corners_as_geojson = corners_to_geojson(corners)
@@ -70,8 +96,15 @@ def get_roi(
         misc.imsave(debug_dir + "/masked_image.png", masked_image.filled(0))
 
     if out_file:
+        roi_file = (
+            Path(__file__)
+            .resolve()
+            .parents[3]
+            .joinpath(outputs_dir, out_file)
+        )
+
         timeStart("saving as geojson")
-        save_features(corners_as_geojson, out_file)
+        save_features(corners_as_geojson, roi_file)
         timeEnd("saving as geojson")
     else:
         print(corners_as_geojson)
