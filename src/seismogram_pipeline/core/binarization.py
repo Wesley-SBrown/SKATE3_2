@@ -18,6 +18,7 @@ from skimage.feature import canny
 
 from .threshold import background_threshold
 from .ridge_detection import find_ridges
+from .utilities import local_min
 
 CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.yaml'))
 
@@ -161,12 +162,8 @@ def get_background_markers(
         the background regions are True.
     """
     dark_pixels = image_gray <= background_threshold(image_gray, prob_background=prob_threshold)
-    # fallback in case local_min isn't imported
-    try:
-        minima = local_min(image_gray)
-    except NameError:
-        minima = peak_local_max_rows(image_gray) & peak_local_max_cols(image_gray)
-        
+    minima = local_min(image_gray)
+            
     markers_background = dark_pixels | minima
     return markers_background
 
