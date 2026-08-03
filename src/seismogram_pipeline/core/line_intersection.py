@@ -51,7 +51,7 @@ def seg_intersect(
     """
     a1, a2, b1, b2 = seg1[0], seg1[1], seg2[0], seg2[1]
     da = a2 - a1
-    db = b2 - b1,
+    db = b2 - b1
     dp = a1 - b1
     dap = perp(da)
     denom = dot(dap, db)
