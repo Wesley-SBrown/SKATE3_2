@@ -76,7 +76,7 @@ pipeline_settings:
 
   # Cropping and detecting the active recording grid area on the paper
   roi_detection:
-    base_trace_width: 17          # Standard expected width of a line trace in pixels
+    base_trace_width: 15          # Standard expected width of a line trace in pixels
     min_separation_distance: 5     # Minimum pixel distance between distinct ROI boundaries
     min_separation_angle: 5       # Minimum angular alignment for the boundary bounding box
     angles:

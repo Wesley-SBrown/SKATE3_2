@@ -476,7 +476,7 @@ def find_ridges(
     # Vertical ridges need to either be prominent or highly connected
     ridges_v = ridges_v & (
         (max_values_v >= high_threshold)
-        | remove_small_objects(ridges_v, min_ridge_length, connectivity=2)
+        | remove_small_objects(ridges_v, max_size = min_ridge_length - 1, connectivity=2)
     )
 
     timeStart("aggregate information about maxima of horizontal ridges")

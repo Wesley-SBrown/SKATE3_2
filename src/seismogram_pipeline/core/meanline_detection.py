@@ -85,7 +85,7 @@ def detect_meanlines(
     small_object_size = lambda scale: int(config.get("base_small_object_size") * scale * scale)
 
     filtered_image = remove_small_objects(
-        black_and_white_image, small_object_size(scale)
+        black_and_white_image, max_size=small_object_size(scale) - 1
     )
     timeEnd("remove small objects")
 

@@ -217,11 +217,11 @@ def remove_small_segments_and_edges(
         Cleaned version of original input array
     """
     remove_small_objects(
-        image_bin, min_size=min_trace_size, connectivity=2, out=image_bin
+        image_bin, max_size=min_trace_size - 1, connectivity=2, out=image_bin
     )
     image_bin = ~image_bin
     remove_small_objects(
-        image_bin, min_size=min_edge_length, connectivity=2, out=image_bin
+        image_bin, max_size=min_edge_length - 1, connectivity=2, out=image_bin
     )
     image_bin = ~image_bin
     return image_bin
