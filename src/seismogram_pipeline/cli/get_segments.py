@@ -18,6 +18,8 @@ Options:
 
 from docopt import docopt
 from typing import Union
+from pathlib import Path
+import yaml 
 
 def get_segments(
     in_file: str, roi_file: str, out_file: str, 
@@ -39,6 +41,21 @@ def get_segments(
     debug_dir: str | bool, default False
         Flag whether to save intermediate images
     """
+
+    CONFIG_PATH = (Path(__file__)
+        .resolve()
+        .parents[3]
+        / "config.yaml"
+    )
+
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)['storage']
+
+    storage_config = config.get('storage', {})
+    pipeline_settings = config.get('pipeline_settings', {})
+
+    inputs_dir = storage_config.get("inputs_dir", "data/inputs")
+    outputs_dir = storage_config.get("outputs_dir", "data/outputs")
     
     if isinstance(debug_dir, str):
         from ..core.dir import ensure_dir_exists
@@ -54,16 +71,32 @@ def get_segments(
     timeStart("get segments")
 
     timeStart("read image")
-    image = get_image(in_file)
+    in_path = (Path(__file__)
+               .resolve()
+               .parents[3]
+               .joinpath(inputs_dir, in_file)
+    )
+    image = get_image(in_path)
     timeEnd("read image")
 
-    intersections = get_features(roi_file)
+    roi_path = (Path(__file__)
+                .resolve()
+                .parents[3]
+                .joinpath(outputs_dir, roi_file)
+
+    )
+    intersections = get_features(roi_path)
 
     timeStart("calculate segments")
     segments = get_segments(image, intersections)
     timeEnd("calculate segments")
 
-    save_segments_as_geojson(segments, out_file)
+    out_path = (Path(__file__)
+                .resolve()
+                .parents[3]
+                .joinpath(outputs_dir, out_file)
+    )
+    save_segments_as_geojson(segments, out_path)
     timeEnd("get segments")
 
 
