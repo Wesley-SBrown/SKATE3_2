@@ -19,6 +19,7 @@ Options:
 import os, yaml
 from docopt import docopt
 from typing import Union
+from pathlib import Path
 
 
 def get_intersections(
@@ -43,10 +44,20 @@ def get_intersections(
 
     """
     # TODO: implement scale resizing
+    CONFIG_PATH = (Path(__file__)
+        .resolve()
+        .parents[3]
+        / "config.yaml"
+    )
 
-    CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../config.yaml'))
     with open(CONFIG_PATH, "r") as f:
-        storage_config = yaml.safe_load(f)['storage']
+        config = yaml.safe_load(f)['storage']
+
+    storage_config = config.get('storage', {})
+    pipeline_settings = config.get('pipeline_settings', {})
+
+    inputs_dir = storage_config.get("inputs_dir", "data/inputs")
+    outputs_dir = storage_config.get("outputs_dir", "data/outputs")
 
     # guards against accidental True value passing check
     if isinstance(debug_dir, str):
@@ -65,10 +76,23 @@ def get_intersections(
     timeStart("get intersections")
 
     timeStart("read image")
-    grayscale_image = get_image(in_file)
+    input_path = (Path(__file__)
+                  .resolve()
+                  .parents[3]
+                  .joinpath(inputs_dir, in_file)
+    )
+    grayscale_image = get_image(input_path)
     timeEnd("read image")
 
-    roi_polygon = get_features(roi_file)["geometry"]["coordinates"][0]
+    roi_path = (
+            Path(__file__)
+                .resolve()
+                .parents[3]
+                .joinpath(outputs_dir, roi_file)
+        )
+    
+
+    roi_polygon = get_features(roi_path)["geometry"]["coordinates"][0]
 
     timeStart("mask image")
     masked_image = mask_image(grayscale_image, roi_polygon)
@@ -78,12 +102,28 @@ def get_intersections(
 
     # if target file missing, fall back on config default
     if not out_file:
-        out_file = os.path.join(storage_config.get("outputs_dir", "data/outputs"), storage_config["pipeline_config"]["intersections"])
+        out_path = (Path(__file__)
+                    .resolve()
+                    .parents[3]
+                    .joinpath(
+                        outputs_dir,
+                        storage_config["pipeline_config"]["intersections"]
+                    )
+        )
+    else:
+        out_path = (Path(__file__)
+                    .resolve()
+                    .parents[3]
+                    .joinpath(
+                        outputs_dir,
+                        out_file
+                    )
+        )
 
-    timeStart("saving to " + out_file)
+    timeStart("saving to " + str(out_path))
     intersections_as_geojson = intersections.asGeoJSON()
-    save_features(intersections_as_geojson, out_file)
-    timeEnd("saving to " + out_file)
+    save_features(intersections_as_geojson, out_path)
+    timeEnd("saving to " + str(out_path))
 
     if isinstance(debug_dir, str):
         # safe platform-agnositc path combining 
