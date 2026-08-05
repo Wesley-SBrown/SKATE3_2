@@ -126,10 +126,6 @@ def watershed_segmentation(
         are True, and background pixels are False.
     """
 
-    # TODO: Add functionality for `force_breaks`
-    # give option to exclude the canny edges from image_bin, to force breaks
-    # along the edges and help with segmentation later on
-
     bin_markers = np.zeros_like(image_gray, dtype=int)
     bin_markers = np.where(markers_trace, 2, 0)
     bin_markers = np.where(markers_background, 1, bin_markers)
@@ -140,6 +136,11 @@ def watershed_segmentation(
 
     image_bin = watershed(edges, bin_markers)
     image_bin = image_bin == 2
+
+    # Exclude canny edges from image_bin if force breaks enabled 
+    if force_breaks:
+        image_bin[image_canny] = False
+
     return image_bin
 
 
