@@ -24,8 +24,9 @@ storage:
     intersections: "intersections.json"         # Detected trace/grid intersections (JSON)
     intersections_raster: "intersections_raster.png" # Visual map of intersections
     segments: "segments.json"                   # Broken down trace segments
-    segment_regions: "segment_regions.png"       # Visual map of segmented areas
+    segment_regions: "segment_regions.png"      # Visual map of segmented areas
     segment_assignments: "segment_assignments.json" # Segments mapped to specific timeline traces
+    endpoints: "endpoints.json"                 # Endpoints of a seismogram
 
 pipeline_settings:
   # General image scaling and thresholding limits

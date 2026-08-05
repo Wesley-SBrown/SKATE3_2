@@ -48,7 +48,7 @@ def get_segments(
 
 
 def save_segments_as_geojson(segments, filepath):
-    timeStart("saving to " + filepath)
+    timeStart("saving to " + str(filepath))
     features = [
         geojson.Feature(geometry=geojson.LineString(line), id=idx)
         for idx, line in enumerate(segments)
@@ -56,4 +56,4 @@ def save_segments_as_geojson(segments, filepath):
     collection = geojson.FeatureCollection(features)
     with open(filepath, "w") as outfile:
         geojson.dump(collection, outfile)
-    timeEnd("saving to " + filepath)
+    timeEnd("saving to " + str(filepath))

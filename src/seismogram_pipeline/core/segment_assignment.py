@@ -85,9 +85,7 @@ def assign_segments_to_meanlines(
                     meanline_comp[meanline]["slope"]
                     * (
                         np.mean(domain[seg_count])
-                        - meanlines["features"][meanline]["geometry"]["coordinates"][0][
-                            0
-                        ]
+                        - meanlines["features"][meanline]["geometry"]["coordinates"][0][0]
                     )
                     + meanlines["features"][meanline]["geometry"]["coordinates"][0][1]
                 )
@@ -164,9 +162,7 @@ def assign_segments_to_meanlines(
                     segments["features"][stranded_timing]["geometry"]["coordinates"]
                 )
                 < max_coord_length
-                and segment_data["features"][stranded_timing]["properties"][
-                    "standard_deviation"
-                ]
+                and segment_data["features"][stranded_timing]["properties"]["standard_deviation"]
                 < max_sd
             ):
                 meanline_timing.append(stranded_timing)
@@ -178,9 +174,7 @@ def assign_segments_to_meanlines(
             timing_guess = list(
                 range(
                     int(
-                        segment_data["features"][timings]["geometry"]["coordinates"][0][
-                            0
-                        ]
+                        segment_data["features"][timings]["geometry"]["coordinates"][0][0]
                     ),
                     max_coord_search,
                     base_timing_spacing,

@@ -35,14 +35,42 @@ def get_endpoints(segments_file: str, out_file: str) -> None:
         write_geojson,
         write_csv,
     )
+    import yaml
+    from pathlib import Path
 
-    features = get_features(filename=segments_file)
+    CONFIG_PATH = (Path(__file__)
+        .resolve()
+        .parents[3]
+        / "config.yaml"
+    )
+
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)['storage']
+
+    storage_config = config.get('storage', {})
+    pipeline_outputs = storage_config.get("pipeline_outputs")
+
+    outputs_dir = storage_config.get("outputs_dir", "data/outputs")
+
+    segments_path = (Path(__file__)
+                     .resolve()
+                     .parents[3]
+                     .joinpath(outputs_dir, segments_file)
+    )
+
+    features = get_features(filename=segments_path)
     data = get_endpoint_data(features=features)
     
-    if out_file is not None:
-        write_geojson(out_file, generate_geojson(data))
-    else:
-        write_csv(out_file, data)
+    if out_file is None:
+        out_file = pipeline_outputs.get("endpoints")
+
+    out_path = (Path(__file__)
+                .resolve()
+                .parents[3]
+                .joinpath(outputs_dir, out_file)
+    )
+    
+    write_geojson(out_path, generate_geojson(data))
 
 
 def main():

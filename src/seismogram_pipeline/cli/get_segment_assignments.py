@@ -15,6 +15,8 @@ Options:
 
 """
 from docopt import docopt
+from pathlib import Path
+import yaml
 
 
 def get_segment_assignments(
@@ -25,15 +27,16 @@ def get_segment_assignments(
     Parameters
     ----------
     segments_file: str
-        Input segments file path
+        Input segments filename
     meanlines_file: str
-        Input meanlines file path
+        Input meanlines filename
     out_file: str
-        Output segment assignments file path
+        Output segment assignments filename
     """
 
     from ..core.geojson_io import get_features
     from ..core.timer import timeStart, timeEnd
+    from ..core.endpoints import get_endpoint_data, generate_geojson
     from ..core.segment_assignment import (
         assign_segments_to_meanlines,
         save_assignments_as_json,
@@ -41,12 +44,41 @@ def get_segment_assignments(
 
     timeStart("get segment assignments")
 
+    CONFIG_PATH = (Path(__file__)
+        .resolve()
+        .parents[3]
+        / "config.yaml"
+    )
+
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)['storage']
+
+    storage_config = config.get('storage', {})
+    pipeline_settings = config.get('pipeline_settings', {})
+
+    outputs_dir = storage_config.get("outputs_dir", "data/outputs")
+
     timeStart("read segments")
-    segments_features = get_features(filename=segments_file)
+    segments_path = (Path(__file__)
+                     .resolve()
+                     .parents[3]
+                     .joinpath(outputs_dir, segments_file)
+    )
+    segments_features = get_features(filename=segments_path)
     timeEnd("read segments")
 
+    timeStart("compute endpoint stats")
+    endpoint_data = get_endpoint_data(features=segments_features)
+    segments_geojson = generate_geojson(endpoint_data)
+    timeEnd("compute endpoint stats")
+
     timeStart("read meanlines")
-    meanlines_features = get_features(filename=meanlines_file)
+    meanlines_path = (Path(__file__)
+                      .resolve()
+                      .parents[3]
+                      .joinpath(outputs_dir, meanlines_file)
+    )
+    meanlines_features = get_features(filename=meanlines_path)
     timeEnd("read meanlines")
 
     # assign segments to their associated meanlines
@@ -54,12 +86,17 @@ def get_segment_assignments(
     assignments = assign_segments_to_meanlines(
         segments=segments_features,
         meanlines=meanlines_features,
-        segment_data=segments_features # NOTE: `segments_features` passed twice (inferred from function behavior)
+        segment_data=segments_geojson
     )
     timeEnd("segment assignment")
 
     # save to ouput JSON file
-    save_assignments_as_json(data=assignments, filepath=out_file)
+    out_path = (Path(__file__)
+                .resolve()
+                .parents[3]
+                .joinpath(outputs_dir, out_file)
+    )
+    save_assignments_as_json(data=assignments, filepath=out_path)
 
     timeEnd("get segment assignments")
 
