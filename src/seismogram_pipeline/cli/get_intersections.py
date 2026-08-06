@@ -98,7 +98,7 @@ def get_intersections(
     masked_image = mask_image(grayscale_image, roi_polygon)
     timeEnd("mask image")
 
-    intersections = find_intersections(masked_image.filled(False), figure=False) # TODO: added `scale` parameter
+    intersections = find_intersections(masked_image.filled(False), figure=False) # TODO: add `scale` parameter
 
     # if target file missing, fall back on config default
     if not out_file:

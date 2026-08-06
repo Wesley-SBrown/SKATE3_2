@@ -77,16 +77,6 @@ class IntersectionCollection:
 
         return image_intersections
 
-    # # TODO: The CSV output option will not work properly at the moment.
-    # figure = True
-    # if figure:
-    #     if labels:
-    #         image_intersections, _ = label(image_intersections)
-    #     return image_intersections
-    # else:
-    #     output_intersections(['Row', 'Column', 'Degree', 'Radius'], \
-    #     intersections[:,0], intersections[:,1], degrees, radii)
-
 
 def find_intersections_from_file_path(
     input_path: str, 

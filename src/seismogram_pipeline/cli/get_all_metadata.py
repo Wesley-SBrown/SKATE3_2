@@ -253,15 +253,6 @@ def analyze_image(
     save_features(segments_as_geojson, paths["segments"])
     timeEnd("saving centerlines as geojson")
 
-    # TODO: fix the return logic below
-    # return (img_gray, ridges, img_bin, intersections, img_seg)
-    # return segments
-    # detect center lines
-
-    # connect segments
-
-    # output data
-
     time_elapsed = timeEnd("get all metadata")
 
     Record.record("time_elapsed", float(f"{time_elapsed:.2f}"))
