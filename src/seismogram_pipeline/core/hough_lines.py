@@ -330,18 +330,67 @@ def get_line_endpoints_in_image(
         A tuple of integer coordinate pairs `((x0, y0), (x1, y1))` bounding the line.
     """
     rows, cols = image.shape
+    cos_t = np.cos(angle)
+    sin_t = np.sin(angle)
+
+    points = []
+
+    # test the four image boundaries to determine where the polar line intersects
+    # previous implementation relied on strict assumption:
+    #   - every non vertical line spans the entire width of the image
+    # Issue: if line was steep enough, the endpoints may not reach the horizontal edges
+    # within the image frame
+
     # from r = y * sin(theta) + x cos(theta)
-    if np.sin(angle) == 0:
-        # vertical line at x = radius
-        x0 = int(radius)
-        x1 = int(radius)
-        y0 = 0
-        y1 = rows - 1
-    else:
-        # TODO: solve for points that are on the image boundary
-        # instead of always using x0 = 0 and x1 = cols - 1
-        x0 = 0
-        x1 = cols - 1
-        y0 = int((radius - x0 * np.cos(angle)) / np.sin(angle))
-        y1 = int((radius - x1 * np.cos(angle)) / np.sin(angle))
-    return ((x0, y0), (x1, y1))
+    # check intersections with the left boundary (x=0)
+    # check if close to 0 (floating point precision issues)
+    if abs(sin_t) > 1e-7:
+        y = radius / sin_t
+
+        # check if y falls within valid range
+        if 0 <= y <= rows - 1:
+            points.append(0.0, y)
+
+    # check intersection with right boundary (x=cols-1)
+    if abs(sin_t) > 1e-7:
+        y = (radius - (cols - 1) * cos_t) / sin_t
+
+        if 0<= y <= rows - 1:
+            points.append(float(cols - 1), y)
+
+    # check intersection with top boundary (y=0) - flipped Cartesian
+    if abs(cos_t) > 1e-7:
+        x = radius / cos_t
+
+        if 0<= x <= cols -1:
+            points.append(x, 0.0)
+
+    # check intersection with bottom boundary (y=rows-1)
+    if abs(cos_t) > 1e-7:
+        x = (radius - (rows - 1) * sin_t) / cos_t
+
+        if 0<= x <= cols - 1:
+            points.append(x, float(rows - 1)) 
+
+    # if the line passes through a corner - potential to have 2 boundary conditions
+    # handle duplicate points
+    unique_points = []
+    for point in points:
+        if not any(
+            np.isclose(point[0], up[0], atol=1e-3) 
+            and np.isclose(point[1], up[1], atol=1e-3)
+            for up in unique_points
+        ):
+            unique_points.append(point)
+
+    # in case 2 points weren't found, fall back
+    if len(unique_points) < 2:
+        return ((0,0), (cols - 1, rows - 1))
+
+    # return the first two intersection points as ints
+    point_1, point_2 = unique_points[:2]
+
+    return (
+        (int(round(point_1[0])), int(round(point_1[1]))),
+        (int(round(point_2[0])), int(round(point_2[1])))
+    )
