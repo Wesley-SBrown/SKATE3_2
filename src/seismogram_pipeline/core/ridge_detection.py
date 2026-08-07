@@ -16,6 +16,8 @@ from .timer import timeStart, timeEnd
 from .debug import Debug, pad
 
 import numpy as np
+from numpy.typing import NDArray
+from typing import Sequence, Union
 from math import log
 from scipy import ndimage
 from scipy.ndimage import gaussian_filter1d, gaussian_laplace
@@ -27,8 +29,31 @@ import skimage.feature as sf
 from .utilities import normalize
 
 
-def get_ridge_region_vert(ridges, shape):
-    """ """
+def get_ridge_region_vert(
+    ridges: Sequence[Sequence[Union[int, float]]], 
+    shape: Union[tuple[int, int], NDArray[np.intp]] 
+) -> NDArray[np.float64]:
+    """ 
+    Generates a 2D image array representing ridge regions 
+    from inputted ridge features 
+
+    Maps discrete ridge points onto an array by expanding
+    ridge poiints horizontally 
+
+    Spans the columns
+
+    Parameters
+    ----------
+    ridges : Sequence[Sequence[Union[int, float]]]
+        Collection of ridge features
+    shape : tuple[int, int] | NDArray[np.intp]
+        The dimensions of the original image.
+    
+    Returns
+    -------
+    ridge_region : NDArray[np.float64]
+        2D image of ridge regions
+    """
     ridge_region = np.zeros(shape, dtype=float)
 
     for row, col, sigma, max_value in ridges:
@@ -40,8 +65,31 @@ def get_ridge_region_vert(ridges, shape):
     return ridge_region
 
 
-def get_ridge_region_horiz(ridges, shape):
-    """ """
+def get_ridge_region_horiz(
+    ridges: Sequence[Sequence[Union[int, float]]], 
+    shape: Union[tuple[int, int], NDArray[np.intp]]
+) -> NDArray[np.float64]:
+    """ 
+    Generates a 2D image array representing ridge regions 
+    from inputted ridge features 
+
+    Maps discrete ridge points onto an array by expanding
+    ridge poiints vertically
+
+    Spans the rows
+
+    Parameters
+    ----------
+    ridges : Sequence[Sequence[Union[int, float]]]
+        Collection of ridge features
+    shape : Union[tuple[int, int], NDArray[np.intp]]
+        The dimensions of the input image
+
+    Returns
+    -------
+    ridge_region : NDArray[np.float64]
+        2D image of ridge regions
+    """
     ridge_region = np.zeros(shape, dtype=float)
 
     for row, col, sigma, max_value in ridges:
@@ -54,12 +102,53 @@ def get_ridge_region_horiz(ridges, shape):
     return ridge_region
 
 
-def get_slopes(img, axis):
+def get_slopes(
+    img: NDArray[np.generic], 
+    axis: int
+) -> NDArray[np.bool_]:
+    """
+    Calculates slopes of an image along a specified direction
+    & binarizes them using Otsu's thresholding metho
+
+    Parameters
+    ----------
+    img : NDArray[np.generic]
+        Image array
+    axis : int
+        Direction
+    
+    Returns
+    -------
+    binary_mask : NDArray[np.bool_]
+        Array where True marks a gradient strong enough to be
+        considered a significant slope
+    """
     abs_sobel = np.abs(ndimage.sobel(img, axis=axis))
     return abs_sobel > threshold_otsu(abs_sobel)
 
 
-def create_image_cube(img, sigma_list, axis):
+def create_image_cube(
+    img: NDArray[np.generic], 
+    sigma_list: NDArray[np.float64], 
+    axis: int
+) -> NDArray[np.float64]:
+    """
+    Generates a Difference of Guassians (DoG) scale-space image cube
+
+    Parameters
+    ----------
+    img : NDArray[np.generic]
+        Image array
+    sigma_list : NDArray[np.float64]
+        List of standard deviations
+    axis : int
+        Direction
+
+    Returns
+    -------
+    image_cube : NDArray[np.float64]
+        Difference of Guassian image cube
+    """
     gaussian_blurs = [gaussian_filter1d(img, s, axis=axis) for s in sigma_list]
     num_scales = len(gaussian_blurs) - 1
     image_cube = np.zeros((img.shape[0], img.shape[1], num_scales))
@@ -70,8 +159,20 @@ def create_image_cube(img, sigma_list, axis):
 
 
 def create_exclusion_cube(
-    img, image_cube, dark_pixels, convex_pixels, axis, convex_threshold
-):
+    img: NDArray[np.generic], 
+    image_cube: NDArray[np.float64], 
+    dark_pixels: NDArray[np.generic], 
+    convex_pixels: NDArray[np.bool_], 
+    axis: int, 
+    convex_threshold: float
+) -> NDArray[np.bool_]:
+    """
+    Generates a 3D boolean mask (exclusion cube) for ridge extraction
+    Determines which pixels should be excluded based on intensity, darkness, etc
+
+    
+
+    """
 
     timeStart("get slopes")
     slopes = get_slopes(img, axis=axis)
@@ -119,7 +220,7 @@ def _get_high_intensity_peaks(image, mask, num_peaks):
 
 
 def peak_local_max2(
-    image,
+    image ,
     min_distance=1,
     threshold_abs=None,
     threshold_rel=None,
@@ -398,7 +499,7 @@ def compile_ridge_data(sigmas_h, ridges_h, max_values_h):
     return np.hstack((indices_h, sigmas_h, max_values_h))
 
 
-def create_sigma_list(min_sigma, sigma_ratio, scales):
+def create_sigma_list(min_sigma, sigma_ratio, scales)-> NDArray[np.float64]:
     return min_sigma * np.power(sigma_ratio, scales)
 
 

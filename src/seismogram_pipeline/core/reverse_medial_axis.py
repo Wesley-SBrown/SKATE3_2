@@ -5,15 +5,19 @@ Created on Tue Dec  2 17:59:00 2014
 @author: benamy
 """
 import numpy as np
+import numpy.typing as npt
 from .draw import circle
 
 
-def reverse_medial_axis(mat, dist):
+def reverse_medial_axis(
+    mat: npt.NDArray[np.bool_], 
+    dist: npt.NDArray[np.intp]
+) -> npt.NDArray[np.bool_]:
     """
     Returns the reverse medial axis transform.
 
     Parameters
-    ---------------
+    ----------
     mat : ndarray of bools
       Medial axis transform of the image.
       True (or positive) at the medial axis.
@@ -23,7 +27,7 @@ def reverse_medial_axis(mat, dist):
       where mat is True.
 
     Returns
-    ---------
+    -------
     r_mat : ndarray of bools
       The reverse medial axis transform.
     """
