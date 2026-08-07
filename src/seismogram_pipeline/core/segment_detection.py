@@ -25,7 +25,7 @@ def get_segments(
 
     shape = image.shape
     line_array = []
-    for i in range(num_traces):
+    for _ in range(num_traces):
         phase_1, phase_2 = random_phase(), random_phase()
         freq_1, freq_2 = random_freq(), random_freq()
         amp_1, amp_2 = random_amplitude(), random_amplitude()
