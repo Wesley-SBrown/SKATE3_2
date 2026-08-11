@@ -121,7 +121,7 @@ def get_segments(
     )
 
     if Debug.active:
-        from lib.segment_coloring import gray2prism
+        from .segment_coloring import gray2prism
 
         # try to assign different gray values to neighboring segments
         traces_colored = (image_segments + num_traces * (image_segments % 4)) / float(
