@@ -1,14 +1,48 @@
 from .timer import timeStart, timeEnd
 
+import numpy as np
 from numpy.random import rand, randint
+from numpy.typing import NDArray
+from typing import Any
 import geojson
 import math
 
+Point2D = tuple[int, int]
 
 def get_segments(
-    image, intersections, num_traces = 24, max_freq_multiplier = 20,
-    min_amplitude = 10, amplitude_divisor = 4, offset_divisor = 4
-):
+    image: NDArray[np.generic], 
+    intersections: Any, 
+    num_traces: int = 24, 
+    max_freq_multiplier: int = 20,
+    min_amplitude: int = 10, 
+    amplitude_divisor: int = 4, 
+    offset_divisor: int = 4
+) -> list[list[Point2D]]:
+    """
+    Generate dummy trace segments modeled as sinusoidal waves across the image width
+
+    Parameters
+    ----------
+    image : NDArray[np.generic]
+        The input image used to determine shape boundaries for segment generation
+    intersections : Any
+        Intersection points or constraints (reserved for future functionality)
+    num_traces : int, optional, default 24
+        The number of trace segments to generate
+    max_freq_multiplier : int, optional, default 20
+        The maximum frequency multiplier for random wave generation
+    min_amplitude : int, optional, default 10
+        The minimum amplitude value for the waves
+    amplitude_divisor : int, optional, default 4
+        The divisor used to determine the maximum amplitude relative to image height
+    offset_divisor : int, optional, default 4
+        The divisor used to determine the minimum vertical offset relative to image height
+
+    Returns
+    -------
+    list[list[Point2D]]
+        A list of generated traces, where each trace is a list of 2D coordinate points (x, y)
+    """
     # TODO: add functionality for `intersections`
     # Generate dummy segments
     def random_phase():
@@ -47,7 +81,20 @@ def get_segments(
     return line_array
 
 
-def save_segments_as_geojson(segments, filepath):
+def save_segments_as_geojson(
+    segments: list[list[Point2D]], 
+    filepath: str
+) -> None:
+    """
+    Save a collection of trace segments as a GeoJSON FeatureCollection file
+
+    Parameters
+    ----------
+    segments : list[list[Point2D]]
+        A list of trace segments, where each segment is a list of 2D coordinate points (x, y)
+    filepath : str
+        The path and filename where the GeoJSON file should be saved
+    """
     timeStart("saving to " + str(filepath))
     features = [
         geojson.Feature(geometry=geojson.LineString(line), id=idx)
