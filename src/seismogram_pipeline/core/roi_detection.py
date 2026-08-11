@@ -3,6 +3,8 @@ from .debug import Debug
 from .stats_recorder import Record
 
 import numpy as np
+from numpy.typing import NDArray
+from typing import Union, Any
 import cv2
 from skimage.filters import threshold_otsu
 from skimage.morphology import disk
@@ -12,6 +14,7 @@ from skimage.transform import hough_line, hough_line_peaks, probabilistic_hough_
 import skimage.draw as skidraw
 from skimage.color import gray2rgb
 
+from typing import Optional
 from .line_intersection import seg_intersect
 from .hough_lines import get_best_hough_lines
 from .otsu_threshold_image import otsu_threshold_image
@@ -19,7 +22,29 @@ from .otsu_threshold_image import otsu_threshold_image
 import matplotlib.pyplot as plt
 import geojson
 
-def get_boundary(grayscale_image, scale=1, base_trace_width = 17):
+def get_boundary(
+    grayscale_image: NDArray[np.generic], 
+    scale: int = 1, 
+    base_trace_width: int = 17
+) -> NDArray[np.bool_]:
+    """
+    Extract the boundary of the largest connected region of interest from a grayscale image 
+    using thresholding, morphological operations, and component labeling
+    
+    Parameters
+    ----------
+    grayscale_image : NDArray[np.generic]
+        The input grayscale image to be processed.
+    scale : int, optional, default 1
+        A scaling factor applied to the base trace width for the morphological operator
+    base_trace_width : int, optional, default 17
+        The baseline width used for creating the disk-shaped structuring element
+
+    Returns
+    -------
+    region_of_interest_boundary : NDArray[np.bool_]
+        A boolean array containing the extracted boundary of the largest identified region of interest
+    """
     timeStart("threshold image")
     black_and_white_image = otsu_threshold_image(grayscale_image)
     timeEnd("threshold image")
@@ -71,24 +96,74 @@ def get_boundary(grayscale_image, scale=1, base_trace_width = 17):
 
     return region_of_interest_boundary
 
+# type aliases for reusability
+Point2D = tuple[int, int]
+LineEndpoints = tuple[Point2D, Point2D]
 
 def get_hough_lines(
-    image, 
-    min_angle, max_angle, 
-    min_separation_distance, min_separation_angle
-):
+    image: NDArray[np.generic], 
+    min_angle: float, max_angle: float, 
+    min_separation_distance: float, 
+    min_separation_angle: float
+) -> Union[LineEndpoints, list[LineEndpoints]]:
+    """
+    Extract Hough lines from an image based on specified angle and separation constraints.
+
+    Parameters
+    ----------
+    image : NDArray[np.generic]
+        The input image from which to extract Hough lines
+    min_angle : float
+        The minimum angle boundary for line detection
+    max_angle : float
+        The maximum angle boundary for line detection
+    min_separation_distance : float
+        The minimum distance separation required between detected lines
+    min_separation_angle : float
+        The minimum angle separation required between detected lines
+
+    Returns
+    -------
+    Union[LineEndpoints, list[LineEndpoints]]
+        The endpoints of the detected line(s), represented as a single pair of 2D points 
+        or a list of pairs depending on the detection results.
+    """
     return get_best_hough_lines(
         image, min_angle, max_angle, min_separation_distance, min_separation_angle
     )
 
 
 def get_box_lines(
-    boundary, 
-    image=None, 
-    min_separation_distance=5, 
-    min_separation_angle=5,
-    angles = None
-):
+    boundary: NDArray[np.generic], 
+    image: Optional[NDArray[np.generic]] = None, 
+    min_separation_distance: float = 5, 
+    min_separation_angle: float = 5,
+    angles: Optional[dict[str, float]] = None
+) -> dict[str, NDArray]:
+    """
+    Split a boundary image into regions (left, right, top, bottom) and extract Hough lines 
+    for each region using specified angle and separation constraints
+
+    Parameters
+    ----------
+    boundary : NDArray[np.generic]
+        The input boundary image to be split and analyzed
+    image : Optional[NDArray[np.generic]], optional
+        An optional base image for debugging and visualization overlays
+    min_separation_distance : float, optional, default 5
+        The minimum distance separation required between detected lines in Hough transform
+    min_separation_angle : float, optional, default 5
+        The minimum angle separation required between detected lines in Hough transform
+    angles : Optional[dict[str, float]], optional
+        A dictionary specifying minimum and maximum angle bounds for vertical and horizontal lines
+        Expected keys are "vertical_min", "vertical_max", "horizontal_min", and "horizontal_max"
+        Default uses standard preset bounds
+
+    Returns
+    -------
+    dict[str, NDArray]
+        A dictionary mapping region names ("left", "right", "top", "bottom") to arrays of detected Hough lines
+    """
     height, width = boundary.shape
     [half_width, half_height] = np.floor([0.5 * width, 0.5 * height]).astype(int)
 
@@ -178,7 +253,27 @@ def get_box_lines(
     return hough_lines
 
 
-def get_corners(lines, image=None):
+def get_corners(
+    lines: dict[str, NDArray], 
+    image: Optional[NDArray[np.generic]] = None
+)-> dict[str, Point2D]:
+    """
+    Calculate the corner intersections of box boundary lines, falling back to image 
+    boundaries if any lines are missing, and optionally record corner metrics and debug images
+
+    Parameters
+    ----------
+    lines : dict[str, NDArray]
+        A dictionary mapping border names ("left", "right", "top", "bottom") to arrays of lines
+    image : Optional[NDArray[np.generic]], optional
+        An optional base image used for fallback dimension checks and visualization overlays
+
+    Returns
+    -------
+    dict[str, Point2D]
+        A dictionary mapping corner names ("top_left", "top_right", "bottom_left", "bottom_right") 
+        to integer 2D coordinate tuples (x, y)
+    """
     # perform check for missing boundary lines
     missing_lines = any(
         lines.get(border) is None or len(lines[border]) == 0
@@ -259,7 +354,34 @@ def get_corners(lines, image=None):
     return corners
 
 
-def get_roi(image, scale, config: dict = {}):
+def get_roi(
+    image: NDArray[np.generic], 
+    scale: int, 
+    config: dict[str, Any] = {}
+) -> dict[str, Point2D]:
+    """
+    Extract the region of interest (ROI) corners from an input image using boundary detection, 
+    Hough line extraction, and intersection calculations governed by a configuration dictionary
+
+    Parameters
+    ----------
+    image : NDArray[np.generic]
+        The input grayscale or color image from which to extract the ROI corners
+    scale : int
+        The scaling factor applied during boundary detection and trace width calculations
+    config : dict[str, Any], optional
+        A configuration dictionary containing optional parameters such as:
+        - "base_trace_width": int (default 17)
+        - "min_separation_distance": float (default 5)
+        - "min_separation_angle": float (default 5)
+        - "angles": dict[str, float] (optional angle constraints dictionary)
+
+    Returns
+    -------
+    dict[str, Point2D]
+        A dictionary mapping the four ROI corners ("top_left", "top_right", "bottom_left", "bottom_right") 
+        to integer 2D coordinate tuples (x, y)
+    """
     base_trace_width = config.get('base_trace_width', 17)
     min_separation_distance = config.get('min_separation_distance', 5)
     min_separation_angle = config.get('min_separation_angle', 5)
@@ -276,7 +398,21 @@ def get_roi(image, scale, config: dict = {}):
     return corners
 
 
-def corners_to_geojson(corners):
+def corners_to_geojson(corners: dict[str, Point2D]) -> geojson.Feature:
+    """
+    Convert a dictionary of corner coordinates into a GeoJSON Feature containing a Polygon
+
+    Parameters
+    ----------
+    corners : dict[str, Point2D]
+        A dictionary mapping corner names ("top_left", "top_right", "bottom_right", "bottom_left") 
+        to integer 2D coordinate tuples (x, y)
+
+    Returns
+    -------
+    geojson.Feature
+        A GeoJSON Feature object representing the polygon formed by the ROI corners
+    """
     newPolygon = geojson.Polygon(
         [
             [
@@ -292,7 +428,22 @@ def corners_to_geojson(corners):
     return newFeature
 
 # reverse helper function
-def geojson_to_corners(feature):
+def geojson_to_corners(feature: Union[geojson.Feature, dict, Any]) -> dict[str, Point2D]:
+    """
+    Convert a GeoJSON Feature or geometry dictionary back into a dictionary of corner coordinates
+
+    Parameters
+    ----------
+    feature : Union[geojson.Feature, dict, Any]
+        The GeoJSON Feature, geometry dictionary, or object containing geometry coordinates 
+        representing the polygon corners.
+
+    Returns
+    -------
+    dict[str, Point2D]
+        A dictionary mapping corner names ("top_left", "top_right", "bottom_right", "bottom_left") 
+        to 2D coordinate tuples.
+    """
     if isinstance(feature, dict):
         geometry = feature.get("geometry", feature)
     else:
