@@ -17,7 +17,7 @@ from .debug import Debug, pad
 
 import numpy as np
 from numpy.typing import NDArray
-from typing import Sequence, Union
+from typing import Sequence, Union, Any
 from math import log
 from scipy import ndimage
 from scipy.ndimage import gaussian_filter1d, gaussian_laplace
@@ -170,8 +170,27 @@ def create_exclusion_cube(
     Generates a 3D boolean mask (exclusion cube) for ridge extraction
     Determines which pixels should be excluded based on intensity, darkness, etc
 
+    Parameters
+    ----------
+    img : NDArray[np.generic]
+        Image array used for slope calculation
+    image_cube : NDArray[np.float64]
+        Difference of Guassians image cube
+    dark_pixels : NDArray[np.generic]
+        Mask indicating the background to be excluded from the base layer
+    convex_pixels : NDArray[np.bool_]
+        Mask indicating the convex pixels to be excluded in the base layer
+    axis : int
+        Direction
+    convex_threshold : float
+        Threshold value applied to the image cube layers to determine
+        convexity exclusion
     
-
+    Returns
+    -------
+    exclusion_cube : NDArray[np.bool_]
+        3D boolean mask of the same shape as `image_cube` where True values
+        indicate points excluded from ridge extraction
     """
 
     timeStart("get slopes")
@@ -202,9 +221,27 @@ def create_exclusion_cube(
 import scipy.ndimage as ndi
 
 
-def _get_high_intensity_peaks(image, mask, num_peaks):
+def _get_high_intensity_peaks(
+    image: NDArray[np.generic], 
+    mask: NDArray[np.generic], 
+    num_peaks: int
+) -> NDArray[np.generic]:
     """
     Return the highest intensity peak coordinates.
+
+    Parameters
+    ----------
+    image : NDArray[np.generic]
+        Input image array
+    mask : NDArray[np.generic]
+        Coordinates of peaks
+    num_peaks : int
+        Maximum number of peaks
+
+    Returns
+    -------
+    coord : NDArray
+        Coordinate array of peaks, ordered by highest intensity
     """
     # get coordinates of peaks
     coord = np.nonzero(mask)
@@ -403,11 +440,31 @@ def peak_local_max2(
         return out
 
 
-def find_valid_maxima(image_cube, footprint, exclusion, low_threshold):
+def find_valid_maxima(
+    image_cube: NDArray[np.float64], 
+    footprint: NDArray[np.bool_], 
+    exclusion: NDArray[np.bool_], 
+    low_threshold: float
+) -> NDArray[np.bool_]:
     """
     Returns a 3D array that is true everywhere that image_cube
     has a local maxima except in regions marked for exclusion.
 
+    Parameters
+    ----------
+    image_cube : NDArray[np.float64]
+        Difference of Guassian image cube
+    footprint : NDArray[np.bool_]
+        Region that is checked for potential ridges
+    exclusion : NDArray[np.bool_]
+        Exclusion cube
+    low_threshold : float
+        Minimum intensity filter
+
+    Returns
+    -------
+    NDArray[np.bool_]
+        3D array of local maxima that is based on the input image_cube
     """
 
     # peak_local_max expects a normalized image (values between 0 and 1)
@@ -427,24 +484,71 @@ def find_valid_maxima(image_cube, footprint, exclusion, low_threshold):
     return maxima & (~exclusion) & (image_cube >= low_threshold)
 
 
-def get_convex_pixels(img, convex_threshold, laplacian_sigma=2.0):
+def get_convex_pixels(
+    img: NDArray[np.generic], 
+    convex_threshold: float, 
+    laplacian_sigma: Union[float, NDArray[np.float64]] = 2.0
+) -> NDArray[np.bool_]:
+    """
+    Retrieves a boolean mask of convex points
+
+    Parameters
+    ----------
+    img : NDArray[np.generic]
+        Input image array
+    convex_threshold : float
+        Threshold value applied to the image cube layers to determine
+        convexity exclusion
+    laplacian_sigma : float, default 2.0
+        Scalar or sequence of scalars for the standard deviation of the guassian filter
+    
+    Returns
+    -------
+    NDArray[np.bool_]
+        Mask of valid convex points
+    """
     laplacian = gaussian_laplace(img, sigma=laplacian_sigma)
     Debug.save_image("ridges", "gaussian_laplace", laplacian)
     return laplacian > convex_threshold
 
 
 def extract_ridge_data(
-    img,
-    sobel_axis,
-    dog_axis,
-    footprint,
-    dark_pixels,
-    convex_pixels,
-    sigma_list,
-    convex_threshold,
-    low_threshold,
+    img: NDArray[np.generic],
+    sobel_axis: int,
+    dog_axis: int,
+    footprint: NDArray[np.bool_],
+    dark_pixels: NDArray[np.generic],
+    convex_pixels: NDArray[np.bool_],
+    sigma_list: NDArray[np.float64],
+    convex_threshold: float,
+    low_threshold: float,
 ):
     """
+    Processes input image, calculates the ridges, and returns the associated data
+
+    Parameters
+    ----------
+    img : NDArray[np.generic]
+        Input image array
+    sobel_axis : int
+        Values: 0 & 1
+        Axis that the intensity change is calculated along
+    dog_axis : int
+        Values: 0 & 1
+        Axis to process the Difference of Gaussians along
+    footprint : NDArray[np.bool_]
+        Region that is checked for potential ridges
+    dark_pixels : NDArray[np.generic]
+        Background pixels to be excluded
+    convex_pixels : NDArray[np.bool_]
+        Mask indicating the convex pixels to be excluded in the base layer
+    sigma_list : NDArray[np.float64]
+        Array of sigma values
+    convex_threshold : float
+        Threshold value applied to the image cube layers to determine
+        convexity exclusion
+    low_threshold : float
+        Minimum intensity filter
     Returns
     -------
     ridges : 2D boolean array
@@ -492,38 +596,119 @@ def extract_ridge_data(
     return ridges, max_values, max_scales
 
 
-def compile_ridge_data(sigmas_h, ridges_h, max_values_h):
+def compile_ridge_data(
+    sigmas_h: NDArray[np.float64], 
+    ridges_h: NDArray[np.bool_], 
+    max_values_h: NDArray[np.float64]
+) -> NDArray:
+    """
+    Stack ridge data together
+
+    Parameters
+    ----------
+    sigmas_h : NDArray[np.float64]
+        Array of sigma values oriented along a given axis
+    ridge_h : NDArray[np.bool_]
+        Array of boolean ridges oriented along a given axis
+    max_values_h : NDArray[np.float64]
+        The values at which the image_cube took on maximum values.
+
+    Returns
+    -------
+    stacked_array : NDArray
+        Array of ridge information formed by stacking the
+        indicies, sigmas, and max_values arrays
+    """
     indices_h = np.argwhere(ridges_h)
     sigmas_h = sigmas_h[ridges_h][:, np.newaxis]
     max_values_h = max_values_h[ridges_h][:, np.newaxis]
     return np.hstack((indices_h, sigmas_h, max_values_h))
 
 
-def create_sigma_list(min_sigma, sigma_ratio, scales)-> NDArray[np.float64]:
+def create_sigma_list(
+    min_sigma: float, 
+    sigma_ratio: float, 
+    scales: NDArray[np.intp]
+)-> NDArray[np.float64]:
+    """
+    Dynamically creates a list of sigmas
+
+    Parameters
+    ----------
+    min_sigma : float
+        Minimum sigma value
+    sigma_ratio : float
+        Step size between scales
+    scales : NDArray[np.intp]
+        Array of powers to raise `min_sigma` to
+
+    Returns
+    -------
+    sigma_list : NDArray[np.float64]
+        Array of step-increasing sigma values
+    """
     return min_sigma * np.power(sigma_ratio, scales)
 
 
 def find_ridges(
-    img,
-    dark_pixels,
-    min_sigma=0.7071,
-    max_sigma=30,
-    sigma_ratio=1.9,
-    min_ridge_length=15,
-    low_threshold=0.002,
-    high_threshold=0.006,
-    convex_threshold=0.00015,
-    figures=True,
-    laplacian_sigma=2.0,
-):
+    img: NDArray[np.generic],
+    dark_pixels: NDArray[np.generic],
+    min_sigma: float = 0.7071,
+    max_sigma: float = 30,
+    sigma_ratio: float = 1.9,
+    min_ridge_length: float = 15,
+    low_threshold: float = 0.002,
+    high_threshold: float = 0.006,
+    convex_threshold: float = 0.00015,
+    figures: bool = True,
+    laplacian_sigma: float = 2.0,
+)-> Union[tuple[NDArray[np.bool_], NDArray[np.bool_]], tuple[Any, Any]]:
     """
-    The values for min_sigma, max_sigma, and sigma_ratio are hardcoded,
-    but they ought to be a function of the scale parameter. They're related
-    to the minimum and maximum expected trace width in pixels.
+    Detects horizontal and vertical ridges in an image using multi-scale Difference of 
+    Gaussians (DoG) and second-derivative (convexity) criteria.
 
+    Parameters:
+    -----------
+    img : NDArray[np.generic]
+        The input image array to process.
+    dark_pixels : NDArray[np.generic]
+        Binary mask indicating dark pixels of interest.
+    min_sigma : float, optional
+        Minimum standard deviation for the Gaussian kernel, corresponding to the 
+        thinnest expected traces. Defaults to 0.7071.
+    max_sigma : float, optional
+        Maximum standard deviation for financial/trace Gaussian kernels, corresponding 
+        to the thickest expected traces. Defaults to 30.
+    sigma_ratio : float, optional
+        Multiplicative step factor between successive scales in the scale-space. 
+        Defaults to 1.9.
+    min_ridge_length : float, optional
+        Minimum length threshold for filtering out small vertical ridge components. 
+        Defaults to 15.
+    low_threshold : float, optional
+        Lower bound threshold for ridge response validation. Defaults to 0.002.
+    high_threshold : float, optional
+        High bound threshold for prominent ridge validation. Defaults to 0.006.
+    convex_threshold : float, optional
+        Threshold for regions with positive second derivatives. Defaults to 0.00015.
+    figures : bool, optional
+        If True, returns binary ridge maps `(ridges_h, ridges_v)`. If False, returns 
+        compiled structural ridge data `(ridge_data_h, ridge_data_v)`. Defaults to True.
+    laplacian_sigma : float, optional
+        Standard deviation used for the Laplacian operator when computing convexity. 
+        Defaults to 2.0.
+
+    Returns:
+    --------
+    Union[Tuple[NDArray[np.bool_], NDArray[np.bool_]], Tuple[Any, Any]]
+        A tuple containing either the horizontal and vertical binary ridge masks 
+        or the compiled structural ridge data dictionaries/arrays depending on `figures`.
+
+    TODO:
+    -----
+    The values for min_sigma, max_sigma, and sigma_ratio are currently hardcoded, 
+    but they ought to be derived dynamically from expected trace widths in pixels. 
     If max_sigma is too small, the algorithm misses ridges of thick traces.
-    Need to do more thinking about how this function works.
-
     """
     # num_scales is the number of scales at which to compute a difference of gaussians
 
