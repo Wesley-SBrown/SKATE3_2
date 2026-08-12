@@ -12,7 +12,7 @@ from .stats_recorder import Record
 import numpy as np
 from numpy.typing import NDArray
 from typing import Union, Optional
-from skimage.morphology import medial_axis, binary_erosion, square
+from skimage.morphology import medial_axis, footprint_rectangle, erosion
 from skimage.segmentation import watershed
 from scipy.ndimage import label
 from skimage import color
@@ -97,13 +97,13 @@ def get_segments(
     Debug.save_image("segments", "steep_slopes", steep_slopes)
 
     timeStart("binary erosion")
-    steep_slopes = binary_erosion(steep_slopes, square(3, dtype=bool))
+    eroded_slopes = erosion(steep_slopes, footprint_rectangle((3, 3)))
     timeEnd("binary erosion")
 
     Debug.save_image("segments", "eroded_steep_slopes", steep_slopes)
 
     timeStart("subtract regions from skeleton")
-    segments_bin = img_skel & (~img_intersections) & (~image_canny) & (~steep_slopes)
+    segments_bin = img_skel & (~img_intersections) & (~image_canny) & (~eroded_slopes)
     timeEnd("subtract regions from skeleton")
 
     Debug.save_image(

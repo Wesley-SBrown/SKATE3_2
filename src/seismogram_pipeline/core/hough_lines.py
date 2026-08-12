@@ -349,28 +349,28 @@ def get_line_endpoints_in_image(
 
         # check if y falls within valid range
         if 0 <= y <= rows - 1:
-            points.append(0.0, y)
+            points.append((0.0, y))
 
     # check intersection with right boundary (x=cols-1)
     if abs(sin_t) > 1e-7:
         y = (radius - (cols - 1) * cos_t) / sin_t
 
         if 0<= y <= rows - 1:
-            points.append(float(cols - 1), y)
+            points.append((float(cols - 1), y))
 
     # check intersection with top boundary (y=0) - flipped Cartesian
     if abs(cos_t) > 1e-7:
         x = radius / cos_t
 
         if 0<= x <= cols -1:
-            points.append(x, 0.0)
+            points.append((x, 0.0))
 
     # check intersection with bottom boundary (y=rows-1)
     if abs(cos_t) > 1e-7:
         x = (radius - (rows - 1) * sin_t) / cos_t
 
         if 0<= x <= cols - 1:
-            points.append(x, float(rows - 1)) 
+            points.append((x, float(rows - 1)))
 
     # if the line passes through a corner - potential to have 2 boundary conditions
     # handle duplicate points
