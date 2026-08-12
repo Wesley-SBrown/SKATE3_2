@@ -13,6 +13,9 @@ from scipy.interpolate import SmoothBivariateSpline as spline2d
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import convex_hull_image
 from numpy.ma.core import MaskedArray
+from numpy.typing import NDArray
+from collections.abc import Callable
+from typing import Union, Optional, Sequence
 from .mitchells_best_candidate import best_candidate_sample
 from .utilities import local_min
 
@@ -20,16 +23,20 @@ generator = Debug.random
 
 
 def threshold(
-    img, threshold_function, num_blocks, block_dims=None, smoothing=0.003,
-    min_num_blocks = 16,
-):
+    img: NDArray[np.generic], 
+    threshold_function: Callable[[NDArray[np.generic]], Union[int, float]], 
+    num_blocks: int, 
+    block_dims: Optional[Union[tuple[int,int], NDArray[np.intp]]] = None, 
+    smoothing: float = 0.003,
+    min_num_blocks: int = 16,
+) -> NDArray[np.generic]:
     """
     Get a smoothly varying threshold from an image by applying the threshold
     function to multiple randomly positioned blocks of the image and using
     a 2-D smoothing spline to set the threshold across the image.
 
     Parameters
-    ------------
+    ----------
     img : 2-D numpy array
       The grayscale image.
     threshold_function : a function
@@ -44,13 +51,14 @@ def threshold(
       than the dimensions of the image. If left unspecified, the blocks will
       be squares with area approximately equal to two times the area of the
       image, divided by num_blocks.
-    smoothing : float, optional
+    smoothing : float, optional, default 0
       A parameter to adjust the smoothness of the 2-D smoothing spline. A
       higher number increases the smoothness of the output. An input of zero
       is equivalent to interpolation.
-
+    min_num_blocks : int, optional
+      The minimum number of blocks allowed.
     Returns
-    ---------
+    -------
     th_new : 2-D numpy array
       The threshold. The array is the same shape as the original input image.
     """
@@ -77,7 +85,23 @@ def threshold(
     points = best_candidate_sample(candidate_coords, num_blocks)
     timeEnd("select block centers")
 
-    def get_threshold_for_block(center):
+    def get_threshold_for_block(
+        center: Union[Sequence[int], NDArray[np.intp]]
+    ) -> Union[int, float]:
+        """
+        Extract a block from the image centered at the given coordinates and 
+        compute its threshold value using the threshold function.
+
+        Parameters
+        ----------
+        center : sequence of int or numpy array
+        The coordinates representing the center of the block to extract.
+
+        Returns
+        -------
+        threshold_value : int or float
+        The computed threshold for the specified block.
+        """
         block = get_block(img, center, block_dims)
         if type(block) is MaskedArray:
             return threshold_function(block.compressed())
@@ -106,11 +130,29 @@ def threshold(
     return th_new
 
 
-def debug_blocks(img, points, block_dims, threshold_function, marker_circle_radius = 20):
+def debug_blocks(
+    img: NDArray[np.generic], 
+    points: Sequence[Union[Sequence[int], NDArray[np.intp]]], 
+    block_dims: Union[tuple[int, int], NDArray[np.intp]], 
+    threshold_function: Callable[[Union[NDArray[np.generic], NDArray[np.number]]], Union[int, float]], 
+    marker_circle_radius: int = 20,
+) -> None:
     """
     To be used for debugging. Saves images of blocks that throw errors,
     and an additional image showing how the blocks are distributed.
 
+    Parameters
+    ----------
+    img : 2-D numpy array
+      The grayscale image being processed.
+    points : sequence of sequences or numpy arrays
+      The coordinates representing the centers of the blocks to evaluate.
+    block_dims : tuple or numpy array
+      The dimensions of the rectangular blocks.
+    threshold_function : a function
+      The threshold function applied to each block.
+    marker_circle_radius : int, optional, default 20
+      The radius of the circles used to mark block centers in the debug image.
     """
     from .debug import Debug
     from skimage.draw import line, circle
@@ -203,10 +245,28 @@ def debug_blocks(img, points, block_dims, threshold_function, marker_circle_radi
 #   return block
 
 
-def get_block(img, center, block_dims):
+def get_block(
+    img: NDArray[np.generic], 
+    center: Union[Sequence[int], NDArray[np.intp]], 
+    block_dims: Union[Sequence[int], NDArray[np.intp]]
+) -> NDArray[np.generic]:
     """
     Returns the rectangular subarray of **img** centered at **center**, with
     dimensions at most equal to **block_dims**.
+
+    Parameters
+    ----------
+    img : 2-D numpy array
+      The input image from which to extract the block.
+    center : sequence of int or numpy array
+      The coordinates (row, col) representing the center of the block.
+    block_dims : sequence of int or numpy array
+      The dimensions (height, width) of the block.
+
+    Returns
+    -------
+    block : 2-D numpy array
+      The extracted subarray from the image.
     """
     img_dims = img.shape
 
@@ -219,22 +279,52 @@ def get_block(img, center, block_dims):
     return block
 
 
-def get_convex_hull(points, img_dims):
+def get_convex_hull(
+    points: NDArray[np.intp], 
+    img_dims: Union[Sequence[int], tuple[int, int]]
+) -> NDArray[np.bool_]:
     """
     Given an array containing the coordinates of points in a 2-D array, outputs
     the convex hull of those points.
+
+    Parameters
+    ----------
+    points : 2-D numpy array
+      An array of point coordinates (row, col) to compute the convex hull for.
+    img_dims : tuple or sequence of int
+      The dimensions (height, width) of the image space.
+
+    Returns
+    -------
+    hull : 2-D boolean numpy array
+      A boolean image representing the convex hull enclosing the points.
     """
     img = np.zeros(img_dims, dtype=bool)
     img[points[:, 0], points[:, 1]] = True
     return convex_hull_image(img)
 
 
-def fix_border(spline, sample_points):
+def fix_border(
+    spline: NDArray[np.generic], 
+    sample_points: NDArray[np.intp]
+):
     """
     Given coordinates of points in a 2-D array, finds the convex hull defined
     by those points. Outputs an image equal to spline within the convex hull
     and, everywhere outside the hull, equal to the value of the nearest point
     inside the hull.
+
+    Parameters
+    ----------
+    spline : 2-D numpy array
+      The evaluated smoothing spline over the image grid.
+    sample_points : 2-D numpy array
+      The coordinates (row, col) of the sample points used to generate the hull.
+
+    Returns
+    -------
+    fixed_spline : 2-D numpy array
+      The spline array with border values extrapolated from the nearest interior points.
     """
     border = ~get_convex_hull(sample_points, spline.shape)
     ind = distance_transform_edt(border, return_distances=False, return_indices=True)
@@ -242,8 +332,9 @@ def fix_border(spline, sample_points):
 
 
 def get_hist_and_background_count(
-    img, max_sample_pixels = 256000,
-):
+    img: NDArray[np.generic], 
+    max_sample_pixels: int = 256000,
+) -> tuple[NDArray[np.intp], NDArray[np.floating], NDArray[np.floating]]:
     """
     Returns a histogram of all pixel values for a grayscale image. Also
     returns the expected histogram of background pixel values.
@@ -253,6 +344,8 @@ def get_hist_and_background_count(
     img : 2-D numpy array
       The grayscale image. Can be either floats on the interval [0,1] or
       ints on the interval [0,255].
+    max_sample_pixels : int, optional, default 256000
+      The maximum number of pixels to sample for the histogram computation.
 
     Returns
     --------
@@ -280,7 +373,23 @@ def get_hist_and_background_count(
     return hist_counts, bin_edges, expected_background_counts
 
 
-def get_expected_background_pixel_counts(pixel_counts):
+def get_expected_background_pixel_counts(
+    pixel_counts: NDArray[np.number]
+) -> NDArray[np.floating]:
+    """
+    Computes the expected distribution of background pixel values assuming 
+    symmetry around the peak background pixel color.
+
+    Parameters
+    ----------
+    pixel_counts : 1-D numpy array
+      The histogram counts of pixel values.
+
+    Returns
+    -------
+    expected_background_counts : 1-D numpy array
+      The expected counts for background pixels across the color bins.
+    """
     peak_pixel_color = get_most_common_background_pixel_color(pixel_counts)
 
     # Copy the histogram values from [0 -> peak] into expected_background_counts
@@ -300,15 +409,34 @@ def get_expected_background_pixel_counts(pixel_counts):
     return expected_background_counts
 
 
-def get_most_common_background_pixel_color(pixel_counts, max_background_intensity_peak = 128):
+def get_most_common_background_pixel_color(
+    pixel_counts: NDArray[np.number], 
+    max_background_intensity_peak: int = 128
+) -> int:
+    """
+    Finds the most common background pixel color by locating the peak 
+    within the allowed maximum background intensity range.
+
+    Parameters
+    ----------
+    pixel_counts : 1-D numpy array
+      The histogram counts of pixel values.
+    max_background_intensity_peak : int, optional, default 128
+      The upper bound of intensity values to search for the background peak.
+
+    Returns
+    -------
+    peak_color : int
+      The pixel intensity value corresponding to the peak of the background distribution.
+    """
     # Assume the most common pixel value < 128 is the peak
     # of the background pixel distribution
     return np.argmax(pixel_counts[0:max_background_intensity_peak])
 
 
-def make_background_thresh_fun(prob_background=1):
+def make_background_thresh_fun(prob_background: float = 1):
 
-    def get_background_thresh(img):
+    def get_background_thresh(img: NDArray[np.generic])-> Union[float, int]:
         """
         Identifies a threshold for pixel intensity below which pixels are part of
         the background with at least a **prob_background** estimated probability.
@@ -343,9 +471,9 @@ def make_background_thresh_fun(prob_background=1):
     return get_background_thresh
 
 
-def make_foreground_thresh_fun(prob_foreground=0.99):
+def make_foreground_thresh_fun(prob_foreground: float = 0.99):
 
-    def get_foreground_thresh(img):
+    def get_foreground_thresh(img: NDArray[np.generic])-> Union[float, int]:
         """
         Identifies a threshold for pixel intensity above which pixels are part of
         the foreground with at least a **prob_background** estimated probability.
@@ -379,9 +507,13 @@ def make_foreground_thresh_fun(prob_foreground=0.99):
 
 
 def background_threshold(
-    img, prob_background=1, num_blocks=None, block_dims=None,
-    smoothing_factor = 0.003, default_block_pixel_area = 250000
-):
+    img: NDArray[np.generic], 
+    prob_background: float = 1.0, 
+    num_blocks: Optional[int] = None, 
+    block_dims: Union[Sequence[int], NDArray[np.intp]] = None,
+    smoothing_factor: float = 0.003, 
+    default_block_pixel_area: int = 250000
+) -> NDArray[np.generic]:
     """
     The pixel intensity at every location in the image below which the pixel
     is likely part of the dark background. The threshold varies smoothly
@@ -392,7 +524,7 @@ def background_threshold(
     img : 2-D numpy array
       The grayscale image. Can be either floats on the interval [0,1] or
       ints on the interval [0,255].
-    prob_background : float, optional
+    prob_background : float, optional, default 1.0
       The minimum probability (estimated) that a pixel below the threshold
       is part of the backround. Must be <= 1. Lower numbers will result in
       higher thresholds.
@@ -403,6 +535,10 @@ def background_threshold(
       than the dimensions of the image. If left unspecified, the blocks will
       be squares with area approximately equal to two times the area of the
       image, divided by num_blocks.
+    smoothing_factor : float, optional, default 0.003
+      A parameter to adjust the smoothness of the 2-D smoothing spline.
+    default_block_pixel_area : int, optional, default 250000
+      The default area in pixels used to estimate num_blocks when not provided.
 
     Returns
     ----------
@@ -422,20 +558,24 @@ def background_threshold(
 
 
 def foreground_threshold(
-    img, prob_foreground=0.99, num_blocks=None, block_dims=None,
-    smoothing_factor = 0.003, default_block_pixel_area = 250000
-):
+    img: NDArray[np.generic], 
+    prob_foreground: float = 0.99, 
+    num_blocks: Optional[int] = None, 
+    block_dims: Union[Sequence[int], NDArray[np.intp]] = None,
+    smoothing_factor: float = 0.003, 
+    default_block_pixel_area: int = 250000
+) -> NDArray[np.generic]:
     """
     The pixel intensity at every location in the image above which the pixel
     is likely part of the bright foreground. The threshold varies smoothly
     across the image.
 
     Parameters
-    ------------
+    ----------
     img : 2-D numpy array
       The grayscale image. Can be either floats on the interval [0,1] or
       ints on the interval [0,255].
-    prob_foreground : float, optional
+    prob_foreground : float, optional, default 0.99
       The minimum probability (estimated) that a pixel above the threshold
       is part of the foreground. Must be <= 1. Lower numbers will result in
       lower thresholds.
@@ -446,9 +586,13 @@ def foreground_threshold(
       than the dimensions of the image. If left unspecified, the blocks will
       be squares with area approximately equal to two times the area of the
       image, divided by num_blocks.
+    smoothing_factor : float, optional, default 0.003
+      A parameter to adjust the smoothness of the 2-D smoothing spline.
+    default_block_pixel_area : int, optional, default 250000
+      The default area in pixels used to estimate num_blocks when not provided.
 
     Returns
-    ----------
+    -------
     th : 2-D numpy array
       The varying threshold that separates the bright foreground from the
       rest of the image. Has the same size and dimensions as img.
@@ -465,15 +609,15 @@ def foreground_threshold(
 
 
 def flatten_background(
-    img,
-    prob_background=1,
-    num_blocks=None,
-    block_dims=None,
-    return_background=False,
-    img_gray=None,
-    smoothing_factor = 0.003, 
-    default_block_pixel_area = 250000
-):
+    img: NDArray[np.generic],
+    prob_background: float = 1.0,
+    num_blocks: Optional[int] = None,
+    block_dims: Optional[Union[Sequence[int], NDArray[np.integer]]] = None,
+    return_background: bool = False,
+    img_gray: Optional[NDArray[np.generic]] = None,
+    smoothing_factor: float = 0.003, 
+    default_block_pixel_area: int = 250000,
+) -> Union[NDArray[np.generic], tuple[NDArray[np.generic], NDArray[np.bool_]]]:
     """
     Finds the pixel intensity at every location in the image below which the
     pixel is likely part of the dark background. Pixels darker than this
@@ -496,7 +640,16 @@ def flatten_background(
       than the dimensions of the image. If left unspecified, the blocks will
       be squares with area approximately equal to two times the area of the
       image, divided by num_blocks.
-
+    return_background : bool, optional
+      If True, returns a tuple containing both the flattened image and the 
+      boolean background mask.
+    img_gray : 2-D numpy array, optional
+      Optional reference grayscale image used for local minima calculation.
+    smoothing_factor : float, optional
+      Smoothing parameter for the 2-D smoothing spline threshold.
+    default_block_pixel_area : int, optional
+      The default area in pixels used to estimate num_blocks when not provided.
+    
     Returns
     --------
     flattened : 2-D numpy array
