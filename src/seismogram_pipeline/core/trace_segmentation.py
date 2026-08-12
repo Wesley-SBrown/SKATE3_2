@@ -10,6 +10,8 @@ from .debug import Debug
 from .stats_recorder import Record
 
 import numpy as np
+from numpy.typing import NDArray
+from typing import Union, Optional
 from skimage.morphology import medial_axis, binary_erosion, square
 from skimage.segmentation import watershed
 from scipy.ndimage import label
@@ -24,15 +26,42 @@ from geojson import FeatureCollection
 
 
 def get_segments(
-    img_gray,
-    img_bin,
-    img_skel,
-    dist,
-    img_intersections,
-    ridges_h,
-    ridges_v,
-    figure=False,
-):
+    img_gray: NDArray[np.generic],
+    img_bin: NDArray[np.bool_],
+    img_skel: NDArray[np.bool_],
+    dist: NDArray[np.floating],
+    img_intersections: NDArray[np.bool_],
+    ridges_h: NDArray[np.bool_],
+    ridges_v: NDArray[np.bool_],
+    figure: bool = False,
+) -> Union[dict[int, segment], tuple[dict[int, segment], NDArray[np.intp]]]:
+    """
+    Extracts and labels individual trace segments from an image skeleton and grayscale data.
+
+    Parameters
+    ----------
+    img_gray : NDArray[np.generic]
+        Grayscale input image.
+    img_bin : NDArray[np.bool_]
+        Binarized version of the input image.
+    img_skel : NDArray[np.bool_]
+        Skeletonized version of the image.
+    dist : NDArray[np.floating]
+        Distance transform array.
+    img_intersections : NDArray[np.bool_]
+        Boolean array indicating intersection pixels.
+    ridges_h : NDArray[np.bool_]
+        Horizontal ridge lines.
+    ridges_v : NDArray[np.bool_]
+        Vertical ridge lines.
+    figure : bool, optional
+        Whether to return the labeled image alongside the segments dictionary, by default False.
+
+    Returns
+    -------
+    Union[dict[int, segment], tuple[Dict[int, segment], NDArray[np.intp]]]
+        A dictionary mapping segment IDs to segment objects, and optionally the labeled segment image.
+    """
     timeStart("canny edge detection")
     image_canny = canny(img_gray)
     timeEnd("canny edge detection")
@@ -174,19 +203,33 @@ def get_segments(
         return (segments, image_segments)
 
 
-def img_seg_to_seg_objects(img_seg, num_segments, ridges_h, ridges_v, img_gray):
+def img_seg_to_seg_objects(
+    img_seg: NDArray[np.intp],
+    num_segments: int,
+    ridges_h: NDArray[np.bool_],
+    ridges_v: NDArray[np.bool_],
+    img_gray: NDArray[np.generic],
+) -> dict[int, segment]:
     """
     Creates segment objects from an array of labeled pixels.
 
     Parameters
-    ------------
-    img_seg : 2-D numpy array of ints
+    ----------
+    img_seg : NDArray[np.intp]
       An array with each pixel labeled according to its segment.
+    num_segments : int
+      Total number of segments found in the image.
+    ridges_h : NDArray[np.bool_]
+      Image containing the horizontal ridge lines.
+    ridges_v : NDArray[np.bool_]
+      Image containing the vertical ridge lines.
+    img_gray : NDArray[np.generic]
+      Grayscale input image.
 
     Returns
-    --------
-    segments : list of segments
-      A list containing all the trace segments.
+    -------
+    segments : dict[int, segment]
+      A dictionary mapping segment indices to segment objects.
     """
 
     # segment_coordinates becomes a list of segments, where
@@ -251,7 +294,28 @@ def img_seg_to_seg_objects(img_seg, num_segments, ridges_h, ridges_v, img_gray):
     return segments
 
 
-def image_overlay(img, overlay, mask=None):
+def image_overlay(
+    img: NDArray[np.generic],
+    overlay: NDArray[np.generic],
+    mask: Optional[NDArray[np.bool_]] = None,
+) -> NDArray[np.generic]:
+    """
+    Overlays an image on top of another using an optional mask.
+
+    Parameters
+    ----------
+    img : NDArray[np.generic]
+        Base image.
+    overlay : NDArray[np.generic]
+        Image to overlay.
+    mask : Optional[NDArray[np.bool_]], optional
+        Mask to apply during overlay, by default None.
+
+    Returns
+    -------
+    NDArray[np.generic]
+        Combined overlay image.
+    """
     if img.ndim == 2:
         img = color.gray2rgb(img)
     if overlay.ndim == 2:
@@ -273,15 +337,35 @@ def image_overlay(img, overlay, mask=None):
 #   return (FeatureCollection(features), properties)
 
 
-def segments_to_geojson(segments):
+def segments_to_geojson(
+    segments: dict[int, segment]) -> FeatureCollection:
+    """
+    Converts a collection of segment objects into a GeoJSON FeatureCollection.
+
+    Parameters
+    ----------
+    segments : dict[int, segment]
+        Dictionary of segment objects.
+
+    Returns
+    -------
+    FeatureCollection
+        GeoJSON FeatureCollection representing the line segments.
+    """
     geojson_line_segments = [
         seg.to_geojson_feature() for seg in segments.values() if seg.has_center_line
     ]
     return FeatureCollection(geojson_line_segments)
 
 
-def get_ridge_line(ridges_h, ridges_v, region):
+def get_ridge_line(
+    ridges_h: NDArray[np.bool_],
+    ridges_v: NDArray[np.bool_],
+    region: NDArray[np.integer],
+) -> NDArray[np.floating]:
     """
+    Generates a centerline for a given region using horizontal and vertical ridges.
+
     Parameters
     ------------
     ridges_h : 2-D boolean array
@@ -304,25 +388,44 @@ def get_ridge_line(ridges_h, ridges_v, region):
     return ridge_line
 
 
-def get_image_values(img_gray, coords):
+def get_image_values(
+    img_gray: NDArray[np.generic], coords: NDArray[np.intp]
+) -> list[int]:
+    """
+    Retrieves scaled intensity values from a grayscale image at specified coordinate points.
+
+    Parameters
+    ----------
+    img_gray : NDArray[np.generic]
+        Grayscale input image.
+    coords : NDArray[np.intp]
+        Array of coordinate points.
+
+    Returns
+    -------
+    list[int]
+        List of scaled integer intensity values.
+    """
     return [int(255 * img_gray[int(round(pt[0])), int(round(pt[1]))]) for pt in coords]
     # return [int(255*img_gray[tuple(pt)]) for pt in coords]
 
 
-def get_ridge_coords_in_region(ridges, coord_list):
+def get_ridge_coords_in_region(
+    ridges: NDArray[np.bool_], coord_list: NDArray[np.intp]
+) -> NDArray[np.intp]:
     """
     Filter through a list of coordinates, returning only those
     that correspond to a true value in **ridges**.
 
     Parameters
-    ------------
+    ----------
     ridges : 2-D boolean array
       The image containing the ridge lines.
     coord_list : 2-D numpy array
       The coordinates that you want to filter through.
 
     Returns
-    ---------
+    -------
     ridge_coords : numpy array
       The subset of coordinates in **coord_list** that correspond
       to ridges.
@@ -333,7 +436,9 @@ def get_ridge_coords_in_region(ridges, coord_list):
     return ridge_coords
 
 
-def ridges_to_centerline(ridge_h_coords, ridge_v_coords):
+def ridges_to_centerline(
+    ridge_h_coords: NDArray[np.intp], ridge_v_coords: NDArray[np.intp]
+) -> NDArray[np.floating]:
     """
     After corresponding with Benamy, it sounds like the purpose
     of this function is to trim vertical ridges off the ends of
@@ -343,6 +448,17 @@ def ridges_to_centerline(ridge_h_coords, ridge_v_coords):
     else in the ridge, verticle ridge pixels are flanked by
     horizontal ridge pixels, so we know we have them all.
 
+    Parameters
+    ----------
+    ridge_h_coords : NDArray[np.intp]
+        Horizontal ridge coordinates.
+    ridge_v_coords : NDArray[np.intp]
+        Vertical ridge coordinates.
+
+    Returns
+    -------
+    NDArray[np.intp]
+        Centerline series coordinates.
     """
     if (ridge_h_coords.size == 0) and (ridge_v_coords.size == 0):
         return np.array([[-1, -1]])
@@ -381,16 +497,18 @@ def ridges_to_centerline(ridge_h_coords, ridge_v_coords):
     return ridge_line_to_series(ridge)
 
 
-def ridge_line_to_series(coords):
+def ridge_line_to_series(coords: NDArray[np.intp]) -> NDArray[np.floating]:
     """
+    Averages coordinates in the y direction across x values to estimate the center line.
+    
     Parameters
-    ------------
+    ----------
     coords : 2-D int array
       An array of all pixel coordinates that define the ridge. Coordinates
       get averaged in the y direction to estimate the center line coords.
 
     Returns
-    ---------
+    -------
     series : 2-D int array
       An array of all pixel coordinates that define the ridge center line.
 
