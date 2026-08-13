@@ -34,6 +34,9 @@ def get_segments(
     ridges_h: NDArray[np.bool_],
     ridges_v: NDArray[np.bool_],
     figure: bool = False,
+    color_division_factor: int = 4,
+    erosion_size: tuple[int, int] = (3,3),
+    connectivity_kernel: tuple[int, int] = (3,3)
 ) -> Union[dict[int, segment], tuple[dict[int, segment], NDArray[np.intp]]]:
     """
     Extracts and labels individual trace segments from an image skeleton and grayscale data.
@@ -97,7 +100,7 @@ def get_segments(
     Debug.save_image("segments", "steep_slopes", steep_slopes)
 
     timeStart("binary erosion")
-    eroded_slopes = erosion(steep_slopes, footprint_rectangle((3, 3)))
+    eroded_slopes = erosion(steep_slopes, footprint_rectangle(erosion_size))
     timeEnd("binary erosion")
 
     Debug.save_image("segments", "eroded_steep_slopes", steep_slopes)
@@ -129,7 +132,7 @@ def get_segments(
     Debug.save_image("segments", "distance_transform", rmat_dist)
 
     timeStart("label segment skeletons")
-    image_segments, num_segments = label(segments_bin, np.ones((3, 3)))
+    image_segments, num_segments = label(segments_bin, np.ones(connectivity_kernel))
     timeEnd("label segment skeletons")
 
     Debug.save_image("segments", "labeled_skeleton", image_segments)
@@ -153,8 +156,8 @@ def get_segments(
         from .segment_coloring import gray2prism
 
         # try to assign different gray values to neighboring segments
-        traces_colored = (image_segments + num_traces * (image_segments % 4)) / float(
-            4 * num_traces
+        traces_colored = (image_segments + num_traces * (image_segments % color_division_factor)) / float(
+            color_division_factor * num_traces
         )
         # store a background mask
         background = traces_colored == 0
@@ -389,7 +392,8 @@ def get_ridge_line(
 
 
 def get_image_values(
-    img_gray: NDArray[np.generic], coords: NDArray[np.intp]
+    img_gray: NDArray[np.generic], coords: NDArray[np.intp],
+    rgb_scaling_factor: int = 255
 ) -> list[int]:
     """
     Retrieves scaled intensity values from a grayscale image at specified coordinate points.
@@ -406,7 +410,7 @@ def get_image_values(
     list[int]
         List of scaled integer intensity values.
     """
-    return [int(255 * img_gray[int(round(pt[0])), int(round(pt[1]))]) for pt in coords]
+    return [int(rgb_scaling_factor * img_gray[int(round(pt[0])), int(round(pt[1]))]) for pt in coords]
     # return [int(255*img_gray[tuple(pt)]) for pt in coords]
 
 

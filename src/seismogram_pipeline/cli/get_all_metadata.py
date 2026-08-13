@@ -218,6 +218,7 @@ def analyze_image(
     timeEnd("save intersections raster")
 
     print("\n--SEGMENTS--")
+    segment_cfg = settings.get("segment_detection", {})
     timeStart("get segments")
     segments, labeled_regions = get_segments(
         img_gray,
@@ -228,6 +229,9 @@ def analyze_image(
         ridges_h,
         ridges_v,
         figure=True,
+        color_division_factor=segment_cfg.get("color_division_factor"),
+        erosion_size=segment_cfg.get("erosion_size"),
+        connectivity_kernel=segment_cfg.get("connectivity_kernel")
     )
     timeEnd("get segments")
 

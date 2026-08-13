@@ -107,6 +107,9 @@ pipeline_settings:
     min_amplitude: 10             # Minimum pixel wave amplitude to consider it a real signal variation
     amplitude_divisor: 4          # Scaling factor for amplitude window thresholds
     offset_divisor: 4             # Scaling factor for baseline offset corrections
+    color_division_factor: 4      # Number of color groups
+    erosion_size: (3,3)           # Erosion size window
+    connectivity_kernel: (3,3)
   
   # Binarization thresholds tailored to handle fading ink or paper discoloration
   thresholding:
