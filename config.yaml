@@ -98,6 +98,7 @@ pipeline_settings:
     max_timing_slope_dist: 100    # Maximum distance to compute local slope for time marks
     max_coord_length: 18          # Maximum coordinate array size for localized segment evaluation
     max_sd: 8                     # Maximum standard deviation allowed for linear regression fit
+    max_coord_search: 15000       # Maximum coordinate search region
 
   # Breaking continuous line extractions down into individual trackable segments
   segment_detection:

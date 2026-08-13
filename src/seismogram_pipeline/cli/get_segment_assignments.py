@@ -54,7 +54,10 @@ def get_segment_assignments(
         config = yaml.safe_load(f)['storage']
 
     storage_config = config.get('storage', {})
+
     pipeline_settings = config.get('pipeline_settings', {})
+
+    asmts_cfg = pipeline_settings.get("segment_assignment", {})
 
     outputs_dir = storage_config.get("outputs_dir", "data/outputs")
 
@@ -86,7 +89,18 @@ def get_segment_assignments(
     assignments = assign_segments_to_meanlines(
         segments=segments_features,
         meanlines=meanlines_features,
-        segment_data=segments_geojson
+        segment_data=segments_geojson,
+        max_search_dist=asmts_cfg.get("dist"),
+        max_overlap=asmts_cfg.get("max_overlap"),
+        max_save_dist=asmts_cfg.get("max_save_dist"),
+        base_timing_spacing=asmts_cfg.get("base_timing_spacing"),
+        min_timing_slope_dist=asmts_cfg.get("min_timing_slope_dist"),
+        max_timing_slope_dist=asmts_cfg.get("max_timing_slope_dist"),
+        max_coord_length=asmts_cfg.get("max_coord_length"),
+        max_sd=asmts_cfg.get("max_sd"),
+        max_coord_search=asmts_cfg.get("max_coord_search"),
+        tolerance_window=asmts_cfg.get("tolerance_window"),
+        min_hits=asmts_cfg.get("min_hits")
     )
     timeEnd("segment assignment")
 

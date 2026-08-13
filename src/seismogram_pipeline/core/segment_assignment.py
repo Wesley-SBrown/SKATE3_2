@@ -15,12 +15,14 @@ with open(CONFIG_PATH, "r") as f:
 debug = config["project"].get("debug")
 
 def assign_segments_to_meanlines(
-    segments, meanlines, segment_data, 
-    max_search_dist=45, max_overlap=20, max_save_dist=1200,
-    base_timing_spacing = 232, min_timing_slope_dist = 5, max_timing_slope_dist = 100,
-    max_coord_length = 18, max_sd = 8, max_coord_search = 15000, tolerance_window = 15, min_hits = 3
-):
-    # TODO: determine which are purely for debugging and which are not needed
+    segments: FeatureCollection, meanlines: FeatureCollection, 
+    segment_data: FeatureCollection, max_search_dist: int = 45, 
+    max_overlap: int = 20, max_save_dist: int = 1200,
+    base_timing_spacing: int = 232, min_timing_slope_dist: int = 5, 
+    max_timing_slope_dist: int = 100, max_coord_length: int = 18, 
+    max_sd: int = 8, max_coord_search: int = 15000, 
+    tolerance_window: int = 15, min_hits: int = 3
+) -> dict:
     meanline_database = {}
     timing_marks = {}
     meanline_comp = []
@@ -326,7 +328,7 @@ def assign_segments_to_meanlines(
         go_check = 0
         for values in stranded_segments:
             try:
-                for next_to in xrange(len(meanline_database)):
+                for next_to in range(len(meanline_database)):
                     for seg_val in meanline_database[next_to]["segments"]:
                         if (0 <= (segment_data["features"][seg_val]["geometry"]["coordinates"][0][0]-segment_data["features"][values]["geometry"]["coordinates"][1][0]) < 40) and (abs(segment_data["features"][seg_val]["geometry"]["coordinates"][0][1]-segment_data["features"][values]["geometry"]["coordinates"][1][1]) < 100):
                             grey_left = segments["features"][values]["properties"]["values"]

@@ -31,9 +31,9 @@ def launch_instances(region_name, instance_type, num_instances):
   }
 
   if (not region_name in ami_image_id):
-    print "Missing an ami image id for region %s." % region_name
-    print '''Log into the AWS console, create a new image in the
-    desired region, and add it to spawn_spot_instances.py'''
+    print(f"Missing an ami image id for region {region_name}.")
+    print('''Log into the AWS console, create a new image in the
+    desired region, and add it to spawn_spot_instances.py''')
     sys.exit(1)
 
   # id for the security group that permits ssh access
@@ -44,9 +44,9 @@ def launch_instances(region_name, instance_type, num_instances):
   }
 
   if (not region_name in security_group_ids):
-    print "Missing a security group id for region %s." % region_name
-    print '''Log into the AWS console, create a new security group
-    with ssh permissions, and add it to spawn_spot_instances.py'''
+    print(f"Missing a security group id for region {region_name}.")
+    print('''Log into the AWS console, create a new security group
+    with ssh permissions, and add it to spawn_spot_instances.py''')
     sys.exit(1)
 
   # the user_data script is run once when a new machine boots
@@ -55,7 +55,7 @@ def launch_instances(region_name, instance_type, num_instances):
   
   base64_user_data = base64.b64encode(user_data)
 
-  print "Creating spot requests..."
+  print("Creating spot requests...")
   requests = ec2.request_spot_instances(
     SpotPrice='0.2',
     InstanceCount=num_instances,
@@ -68,7 +68,7 @@ def launch_instances(region_name, instance_type, num_instances):
     }
   )
 
-  print "created spot requests: %s" % requests
+  print(f"created spot requests: {requests}")
 
 if __name__ == '__main__':
   arguments = docopt(__doc__)

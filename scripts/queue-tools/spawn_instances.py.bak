@@ -33,14 +33,14 @@ def launch_instances(num_instances):
   with open("user_data.sh", "r") as myfile:
     user_data = myfile.read()
     
-  print "Creating instances..."
+  print("Creating instances...")
   new_instance_ids = ec2.create_instances(ImageId=ami_image_id,
                        MinCount=num_instances, MaxCount=num_instances,
                        SecurityGroupIds=security_group_ids,
                        InstanceType=instance_type,
                        UserData=user_data)
 
-  print "created instances: %s" % new_instance_ids
+  print(f"created instances: {new_instance_ids}")
 
 if __name__ == '__main__':
   arguments = docopt(__doc__)
