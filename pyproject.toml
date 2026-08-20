@@ -17,6 +17,7 @@ dependencies = [
     "imageio>=2.8.0",
     "PyYaml",
     "opencv-python-headless",
+    "pandas>=2.3.3",
 ]
 
 [project.optional-dependencies]
