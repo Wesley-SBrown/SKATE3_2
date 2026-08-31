@@ -1,5 +1,7 @@
 # scripts/neo4j/load_data.py
 
+from PIL import Image
+
 from src.seismogram_pipeline.core.neo4j.connector import get_driver
 from src.seismogram_pipeline.core.neo4j.stations import load_stations
 from src.seismogram_pipeline.core.neo4j.excel import load_indiv_excel_sheet   
