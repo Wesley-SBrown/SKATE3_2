@@ -16,3 +16,4 @@ __pycache__/
 .env
 *.xlsx
 *.csv
+box_cache/
