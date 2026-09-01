@@ -4,11 +4,9 @@ from dotenv import load_dotenv
 import os
 from neo4j import Driver, GraphDatabase
 
-load_dotenv()
+from src.seismogram_pipeline.core.neo4j.connector import get_driver
 
-URI = os.getenv("NEO4J_URI")
-USERNAME = os.getenv("NEO4J_USERNAME")
-PASSWORD = os.getenv("NEO4J_PASSWORD")
+load_dotenv()
 
 def get_overview(driver: Driver) -> None:
     """
@@ -88,6 +86,6 @@ def get_overview(driver: Driver) -> None:
         print(f"Relationship: {rel_type:<25} | Count: {count}") 
 
 if __name__=='__main__':
-    driver = GraphDatabase.driver(uri=URI, auth=(USERNAME, PASSWORD))
+    driver = get_driver()
     get_overview(driver=driver)
     driver.close()
