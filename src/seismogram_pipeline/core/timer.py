@@ -27,7 +27,7 @@ def timeStart(key: str) -> None:
     timer_open = True
 
 
-def timeEnd(key: str) -> None:
+def timeEnd(key: str) -> float:
     """
     Ends timer for specific operation
 

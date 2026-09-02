@@ -25,9 +25,9 @@ if __name__=='__main__':
 
     # Uncomment to save a box's record metadata locally
     # Image.MAX_IMAGE_PIXELS = None
-    # save_box_locally(box_filename="Box 1474", debug=False)
+    # save_box_locally(box_filename="Box 2818", debug=False)
 
     # Uncomment to load a box's records from cache into Neo4J
-    # load_box_from_cache(box_num=2848)
+    # load_box_from_cache(box_num=2845)
 
     pass

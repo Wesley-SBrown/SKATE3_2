@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional
 
-from src.seismogram_pipeline.core.neo4j.connector import get_driver
+from .connector import get_driver
 
 
 def load_indiv_excel_sheet(
@@ -108,6 +108,11 @@ def load_indiv_excel_sheet(
             ON (b.boxNum)
         """)
 
+        driver.execute_query("""
+            CREATE INDEX box_dates 
+            IF NOT EXISTS FOR (b:Box) 
+            ON (b.fromDate, b.throughDate)
+        """)
     # Create container node
     container_id = str(uuid.uuid4())
     container_name = sheet_name.split(" - ")[1]
@@ -124,7 +129,7 @@ def load_indiv_excel_sheet(
     for _, row in container.iterrows():
         box_dict = {
             "id": str(uuid.uuid4()),
-            "boxNum": int(row["box_num"]),
+            "boxNum": str(row["box_num"]),
             "stackNum": int(row["stack_num"]) if pd.notna(row["stack_num"]) else None,
             "fromDate": row["from_date"],
             "throughDate": row["through_date"],

@@ -15,7 +15,7 @@ def _group_records_by_station(
             station_data[station_code].append(record)
     return station_data
 
-def _parse_date(date_str: str) -> Optional[str]:
+def parse_date(date_str: str) -> Optional[str]:
     """
     Converts YYYYMMDD to YYYY-MM-DD
     """
@@ -37,7 +37,7 @@ def _parse_date(date_str: str) -> Optional[str]:
     except ValueError:
         return None
 
-def _parse_time(time_str: str) -> Optional[str]:
+def parse_time(time_str: str) -> Optional[str]:
     """
     Converts 4-digit 24hr times to ISO format 'HH:MM:SS'
     Returns None if placeholder ('XXXX') or invalid format
@@ -56,11 +56,11 @@ def _parse_time(time_str: str) -> Optional[str]:
         return None
 
 def _parse_datetime(date_str: str, time_str: str) -> Optional[str]:
-    parsed_date = _parse_date(date_str)
+    parsed_date = parse_date(date_str)
     if not parsed_date:
         return None
         
-    parsed_time = _parse_time(time_str)
+    parsed_time = parse_time(time_str)
     if parsed_time:
         # Returns an ISO compliant string (i.e. "1930-11-09T14:30:00")
         return f"{parsed_date}T{parsed_time}"

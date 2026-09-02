@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from typing import Union, Optional
+from typing import Optional
 import sys
 
 load_dotenv()

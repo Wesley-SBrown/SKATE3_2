@@ -2,9 +2,9 @@
 
 from dotenv import load_dotenv
 import os
-from neo4j import Driver, GraphDatabase
+from neo4j import Driver
 
-from src.seismogram_pipeline.core.neo4j.connector import get_driver
+from .connector import get_driver
 
 load_dotenv()
 

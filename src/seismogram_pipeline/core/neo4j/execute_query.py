@@ -1,9 +1,10 @@
 # src/seismogram_pipeline/core/neo4j/execute_query.py
 
 import re
-from neo4j import GraphDatabase, Driver
+from neo4j import Driver
 
-from src.seismogram_pipeline.core.neo4j.connector import get_driver
+from .connector import get_driver
+from ..timer import timeStart, timeEnd
 
 def execute_cypher(filepath: str, driver: Driver, **query_params) -> None:
     """
@@ -18,6 +19,7 @@ def execute_cypher(filepath: str, driver: Driver, **query_params) -> None:
 
     queries = re.split(r';(?=(?:[^\']*\'[^\']*\')*[^\']*$)(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)', file_contents)
 
+    timeStart("query")
     for query in queries:
         cleaned_query = query.strip()
         if not cleaned_query:
@@ -28,6 +30,7 @@ def execute_cypher(filepath: str, driver: Driver, **query_params) -> None:
             print(driver.execute_query(query, **query_params))
         except Exception as e:
             print(f"Query execution failed: {e}")
+    print(f"Execution time: {timeEnd("query")}")
 
 if __name__=='__main__':
     driver = get_driver()

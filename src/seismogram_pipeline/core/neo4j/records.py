@@ -5,9 +5,9 @@ from PIL import Image
 from pathlib import Path
 from typing import Union
 
-from src.seismogram_pipeline.core.neo4j.connector import get_driver
-from src.seismogram_pipeline.core.verify_network import verify_and_access_share
-from src.seismogram_pipeline.core.neo4j.utils.parsers import (
+from .connector import get_driver
+from ..verify_network import verify_and_access_share
+from .utils.parsers import (
     _group_records_by_station, _parse_datetime
 )
 

@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional
 
-from src.seismogram_pipeline.core.neo4j.connector import get_driver
+from .connector import get_driver
 
 def load_stations(
     station_filename: Optional[str] = None,
