@@ -35,5 +35,11 @@ def execute_cypher(filepath: str, driver: Driver, **query_params) -> None:
 if __name__=='__main__':
     driver = get_driver()
 
-    file_path = "src/seismogram_pipeline/core/neo4j/queries/base_record_query.cypher"
-    execute_cypher(filepath=file_path, driver=driver, target_record_name="CI_HAI_LEG_S_H_S_19410628_0902_2")
+    file_path = "src/seismogram_pipeline/core/neo4j/queries/testing_queries.cypher"
+
+    record_name = "CI_HAI_LEG_S_H_S_19410628_0902_2"
+    contents = record_name.split('_')
+        
+    station = contents[1]
+    execute_cypher(filepath=file_path, driver=driver, target_record_name=record_name,
+                   station_code=station)

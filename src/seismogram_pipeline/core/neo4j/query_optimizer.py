@@ -17,35 +17,43 @@ def retrieve_record(filepath: str, driver: Driver, record_name: str) -> None:
 
     driver.verify_connectivity()
 
-    queries = re.split(r';(?=(?:[^\']*\'[^\']*\')*[^\']*$)(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)', file_contents)
+    query = re.split(r';(?=(?:[^\']*\'[^\']*\')*[^\']*$)(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)', file_contents)[0]
 
-
-    timeStart('get_record')
     contents = record_name.split('_')
     
-    # record_type = None
-    # pier = None
-    # if '.' in contents[2]:
-    #     record_type, pier = contents[2].split(".")
-
+    station = contents[1]
     date = parse_date(contents[6])
 
-    for query in queries:
-        cleaned_query = query.strip()
-        if not cleaned_query:
-            continue
-        print("Executing query...")
-        try:
-            print(driver.execute_query(cleaned_query, 
-                                       target_record_name=record_name,
-                                       date=date
-                        )
-            )
-        except Exception as e:
-            print(f"[ERROR] Query execution failed: {e}")
+    timeStart('get_record')
+    cleaned_query = query.strip()
+    if not cleaned_query:
+        return
+    print("Executing query...")
+    try:
+        timeStart('client_time')
+        result = driver.execute_query(cleaned_query, 
+                                target_record_name=record_name,
+                                date=date,
+                                station_code=station
+                                )
+        client_run_time = timeEnd('client_time')
 
-    print(f"Execution time: {timeEnd("get_record")}")
+        summary = result.summary
+        server_time = summary.result_available_after + summary.result_consumed_after
+        print(f"Server time: {server_time} ms | Client execution time: {client_run_time* 1000:.2f} ms")
+        
+    except Exception as e:
+        print(f"[ERROR] Query execution failed: {e}")
 
+    print(f"Total execution time: {timeEnd("get_record")}")
+
+def retrieve_record_batch(driver: Driver, records: list[str]) -> None:
+    # TODO: implement batch record retrieval
+    # helps counteract cold start issue
+    # testing showed a cut in client execution time by 70ms at the end of a 5 run loop
+    # NOTE: caching on AuraDB's side could also contribute to total speed up time 
+    ...
+    driver.execute_query(batch=records)
 
 if __name__=='__main__':
     driver = get_driver()
@@ -53,7 +61,7 @@ if __name__=='__main__':
     retrieve_record(
         filepath="src/seismogram_pipeline/core/neo4j/queries/optimal_record_query.cypher",
         driver=driver,
-        record_name='CI_HAI_LEG_S_H_S_19410628_0902_2'
+        record_name='CI_HAI_LEG_S_H_S_19410628_0902_1'
     )
 
 
