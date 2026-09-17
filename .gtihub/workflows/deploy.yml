@@ -6,7 +6,7 @@ on:
   push:
     branches: [wb-updates, main]
 
-pemissions:
+permissions:
   contents: read
   pages: write
   id-token: write
