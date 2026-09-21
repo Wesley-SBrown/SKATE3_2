@@ -1,4 +1,8 @@
-name = "my-python-worker"
+name = "skate3-2"
 compatibility_date = "2026-09-08"
 main = "index.py"
 compatibility_flags = ["python_workers"]
+workers_dev = false
+
+[observability.logs]
+enabled = true
