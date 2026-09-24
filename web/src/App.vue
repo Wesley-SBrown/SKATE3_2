@@ -8,7 +8,7 @@ import { ref, reactive, computed } from 'vue'
 // create state obj to contain query filters / parameters
 const queryState = reactive({
     searchMode: 'quick', // 'quick' or 'advanced'
-    searchTerm: '', // single record name lookup
+    recordName: '', // single record name lookup
     stationCode: '', // selected or typed
     fromDate: '',
     toDate: '',
@@ -21,6 +21,8 @@ const queryState = reactive({
 const results = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
+const showJsonViewer = ref(false) 
+const queryDuration = ref(null)
 
 const availableStations = ref([
   'MWC', 'PAS', 'TIN', 'FTC', 'BBC', 'RVR', 'HAI'
@@ -32,7 +34,7 @@ const showStationDropDown = ref(false)
 const filteredStations = computed(() => {
   if (!stationInput.value) return availableStations.value
   return availableStations.value.filter(code =>
-    code.toLowerCase().includes(stationInput.value.toLowerCase)
+    code.toLowerCase().includes(stationInput.value.toLowerCase())
   )
 })
 
@@ -42,12 +44,21 @@ const selectStation = (code) => {
   showStationDropDown = false
 }
 
+// needed b/c issue with dropdowns getting messed up when option selected
+const handleBlur = () => {
+  setTimeout(() => {
+    showStationDropDown.value = false
+  }, 200)
+}
+
 // link to cloudflare worker
-const CLOUDWATCH_WORKER_URL = 'https://-skate3-2.wsb-wesleybrown.workers.dev'
+const CLOUDWATCH_WORKER_URL = 'https://skate3-2.wsb-wesleybrown.workers.dev'
 
 const sendQuery = async () => {
   loading.value = true
   errorMessage.value = ''
+  queryDuration.value = null
+  const startTime = performance.now()
 
   try {
     const response = await fetch(CLOUDWATCH_WORKER_URL, {
@@ -64,11 +75,27 @@ const sendQuery = async () => {
 
     const data = await response.json()
 
-    results.value = data
+    if (data.success && data.results && data.results.data) {
+      const fields = data.results.data.fields
+      const values = data.results.data.values
+
+      // Map Neo4j output payload
+      results.value = values.map(row => {
+        let obj = {}
+        fields.forEach((field, index) => {
+          obj[field] = row[index]
+        })
+        return obj
+      })
+    } else {
+      results.value = []
+    }
   } catch (err) {
     errorMessage.value = `Query failed: ${err.message}`
   } finally {
     loading.value = false
+    const endTime = performance.now()
+    queryDuration.value = Math.round(endTime - startTime)
   }
 }
 
@@ -83,7 +110,7 @@ const copyToClipboard = async (text, successMessage) => {
     await navigator.clipboard.writeText(text)
     alert(successMessage)
   } catch (err) {
-    alert('Falied to copy to clipboard:' + err)
+    alert('Failed to copy to clipboard:' + err)
   }
 }
 
@@ -117,6 +144,19 @@ const downloadJsonAsFile = () => {
     'auradb-query-results.json',
     'application/json'
   )
+}
+
+const formatDateTime = (isoString) => {
+  if (!isoString) return ''
+  const date = new Date(isoString)
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).format(date)
 }
 </script>
 
@@ -152,7 +192,7 @@ const downloadJsonAsFile = () => {
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <input
-          v-model="queryState.searchTerm" 
+          v-model="queryState.recordName" 
           type="text" 
           placeholder="Enter record name (stem)" 
           @keyup.enter="sendQuery"
@@ -173,6 +213,7 @@ const downloadJsonAsFile = () => {
             type="text"
             v-model="stationInput"
             @focus="showStationDropDown = true"
+            @blur="handleBlur"
             @input="showStationDropDown = true; queryState.stationCode = stationInput"
             placeholder="Type or select station..."
           />
@@ -181,7 +222,7 @@ const downloadJsonAsFile = () => {
               v-for="station in filteredStations"
               :key="station"
               class="dropdown-item"
-              @click="selectStation(station)"
+              @mousedown.prevent="selectStation(station)"
             >
               {{ station }}
             </div>
@@ -239,9 +280,21 @@ const downloadJsonAsFile = () => {
     <!---Action Bar-->
     <div v-if="results.length > 0" class="export-actions">
       <span class="action-label">Export:</span>
-      <button class="btn-secondary" @click="copyJsonResults">Copy JSON</button>
-      <button class="btn-secondary" @click="copyRsyncScript">Copy Rsync Script</button>
-      <button class="btn-secondary" @click="downloadJsonAsFile">Download JSON File</button>
+      <button class="btn secondary" @click="showJsonViewer = !showJsonViewer">
+        {{ showJsonViewer ? 'Hide JSON Output' : 'View JSON Output' }}
+      </button>
+      <button class="btn secondary" @click="copyJsonResults">Copy JSON</button>
+      <button class="btn secondary" @click="downloadJsonAsFile">Download JSON File</button>
+      <button class="btn secondary" @click="copyRsyncScript">Copy Rsync Script</button>
+    </div>
+
+    <!---Optional JSON Viewer Box-->
+    <div v-if="results.length > 0 && showJsonViewer" class="json-viewer-container">
+      <textarea 
+        readonly 
+        class="json-textarea" 
+        :value="JSON.stringify(results, null, 2)"
+      ></textarea>
     </div>
   
     <!---Results Grid with Thumbnails-->
@@ -251,8 +304,9 @@ const downloadJsonAsFile = () => {
           <img :src="getThumbnailUrl(item)" alt="Thumbnail preview" loading="lazy" />
         </div>
         <div class="metadata">
-          <p><strong>Stem:</strong>{{ item.file_stem }}</p>
-          <p><strong>Folder:</strong>{{ item.subfolder }}</p>
+          <p><strong>Record:</strong> {{ item.record?.recordName }}</p>
+          <p><strong>Station:</strong> {{ item.record?.stationCode }}</p>
+          <p><strong>Date:</strong> {{ formatDateTime(item.record?.dateTime) }}</p>
         </div>
       </div>
     </div>
@@ -261,8 +315,24 @@ const downloadJsonAsFile = () => {
     <div v-if="results.length === 0 && !loading && !errorMessage"  class="empty-state">
       <p>No query executed yet / No results found</p>
     </div>
+
+    <!---Query Response Metric-->
+    <div v-if="queryDuration !== null" class="query-metric-footer">
+      <span class="metric-text">Response time: <strong>{{ queryDuration }} ms</strong></span>
+    </div>
   </div>
 </template>
+
+<style>
+/* Global dark mode background */
+body {
+  background-color: #121416;
+  color: #f0f6fc;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+</style>
 
 <style scoped>
 .query-widget {
@@ -319,12 +389,13 @@ const downloadJsonAsFile = () => {
   transition: all 0.2s ease;
 }
 
-.tab-btn-active {
+.tab-btn.active {
   background: #21262d;
-  color: #f0f0fc;
+  color: #f0f6fc;
   border-color: #58a6ff;
   font-weight: 500;
 }
+
 .controls {
   display: flex;
   gap: 0.75rem;
@@ -334,7 +405,7 @@ const downloadJsonAsFile = () => {
 
 .input-wrapper {
   position: relative;
-  flex: 1
+  flex: 1;
 }
 
 .search-icon {
@@ -351,8 +422,6 @@ const downloadJsonAsFile = () => {
   background-color: #0d1117;
   border: 1px solid #30363d;
   color: #f0f6fc;
-  margin-left: 0.5rem;
-  border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 0.9rem;
   transition: all 0.2s ease;
@@ -494,6 +563,7 @@ const downloadJsonAsFile = () => {
 .export-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
@@ -504,6 +574,24 @@ const downloadJsonAsFile = () => {
   font-size: 0.85rem;
   color: #8b949e;
   margin-right: 0.25rem;
+}
+
+.json-viewer-container {
+  margin-bottom: 1.5rem;
+}
+
+.json-textarea {
+  width: 100%;
+  height: 200px;
+  background-color: #0d1117;
+  color: #58a6ff;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  box-sizing: border-box;
 }
 
 .results-grid {
@@ -571,18 +659,16 @@ const downloadJsonAsFile = () => {
   font-size: 0.95rem;
 }
 
-.spinner {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 0.8s linear infinite;
-  margin-right: 6px;
+.query-metric-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #30363d;
+  text-align: right;
+  font-size: 0.8rem;
+  color: #8b949e;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.query-metric-footer strong {
+  color: #58a6ff;
 }
 </style>
