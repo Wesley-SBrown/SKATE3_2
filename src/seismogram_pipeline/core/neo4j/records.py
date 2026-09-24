@@ -40,7 +40,7 @@ def save_box_locally(
             record_type, pier = contents[2].split(".")
 
         file_size = item.stat().st_size
-        width, height, color_mode, resolution = None, None, None, None
+        width, height, color_mode, resolution, color_profile = None, None, None, None, None
 
         try:
             with Image.open(item) as img:
@@ -74,24 +74,30 @@ def save_box_locally(
             if debug:
                 print(f"[ERROR]: Failed to parse Tiff metadata for {stem}: {e}")
 
-        record = {
-            "recordName" : stem,
-            "networkCode": contents[0],
-            "stationCode": contents[1],
-            "recordType": record_type if record_type else contents[2],
-            "pier": pier if pier else None,
-            "period": contents[3],
-            "gain": contents[4],
-            "orientation": contents[5],
-            "dateTime": _parse_datetime(contents[6], contents[7]),
-            "side": contents[8] if contents[8].isdigit() else "unknown",
-            "fileSize": file_size,
-            "width": width,
-            "height": height,
-            "colorMode": color_mode,
-            "resolution": resolution,
-            "colorProfile": color_profile
-        }
+        # try to build record and halt process if error occurs
+        try:
+            record = {
+                "recordName" : stem,
+                "networkCode": contents[0],
+                "stationCode": contents[1],
+                "recordType": record_type if record_type else contents[2],
+                "pier": pier if pier else None,
+                "period": contents[3],
+                "gain": contents[4],
+                "orientation": contents[5],
+                "dateTime": _parse_datetime(contents[6], contents[7]),
+                "side": contents[8] if contents[8].isdigit() else "unknown",
+                "fileSize": file_size,
+                "width": width,
+                "height": height,
+                "colorMode": color_mode,
+                "resolution": resolution,
+                "colorProfile": color_profile
+            }
+        except Exception as e:
+            print(f"Stem: {stem}")
+            print(contents)
+            print(f"[ERROR]: {e}")
 
         clean_record = {k: v for k, v in record.items() if v is not None}
         if debug:
