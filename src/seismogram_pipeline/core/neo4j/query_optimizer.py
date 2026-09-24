@@ -65,7 +65,26 @@ if __name__=='__main__':
     )
 
 
-
-    
-
-    
+# [
+#   {
+#     "boxId": "bb16b4ca-0188-4101-954b-43b36d75de8d",
+#     "boxNum": "1474",
+#     "record": {
+#       "dateTime": "1941-06-28T09:02:00",
+#       "stationCode": "HAI",
+#       "period": "S",
+#       "orientation": "S",
+#       "side": "1",
+#       "recordType": "LEG",
+#       "colorMode": "RGB",
+#       "resolution": 1200,
+#       "gain": "H",
+#       "fileSize": 829630948,
+#       "recordName": "CI_HAI_LEG_S_H_S_19410628_0902_1",
+#       "networkCode": "CI",
+#       "colorProfile": "sRGB",
+#       "width": 43848,
+#       "height": 14130
+#     }
+#   }
+# ]

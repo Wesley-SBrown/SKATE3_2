@@ -18,3 +18,5 @@ __pycache__/
 *.csv
 box_cache/
 .dev.vars
+.wrangler/
+python_modules/
