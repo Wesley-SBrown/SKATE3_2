@@ -58,30 +58,53 @@ class Default(WorkerEntrypoint):
             js_payload = await request.json()
             payload = js_payload.to_py() if hasattr(js_payload, "to_py") else dict(js_payload)
 
-            # TODO: incorporate other parameter types with dynamic query selection
             # TODO: maybe have a baseline where it creates a summary of the graph
 
-            # test with record name
-            record_name = payload.get("recordName", "")
+            mode = payload.get('searchMode')
+            if mode == 'quick':
+                # query with record name only
+                record_name = payload.get("recordName", "")
 
-            if not record_name:
-                return Response(json.dumps({"error": "Missing record name in payload"}), status=400,
-                                headers= CORS_HEADERS
-                        )
+                if not record_name:
+                    return Response(json.dumps({"error": "Missing record name in payload"}), status=400,
+                                    headers= CORS_HEADERS
+                            )
 
-            # dynamic query selection here
-            query = QUERIES.get("optimal_record")
+                # only need the optimal record query
+                query = QUERIES.get("optimal_record")
 
-            contents = record_name.split('_')
+                contents = record_name.split('_')
 
-            station = contents[1]
-            date = parse_date(contents[6])
+                station = contents[1]
+                date = parse_date(contents[6])
 
-            query_parameters = {
-                "station_code": station,
-                'date': date,
-                "target_record_name": record_name
-            }
+                query_parameters = {
+                    "station_code": station,
+                    'date': date,
+                    "target_record_name": record_name
+                }
+            else:
+                # attempt to pull all possible parameters
+                station_code = payload.get("stationCode") or None
+                pier = payload.get("pier") or None
+                orientation = payload.get("orientation") or None
+                period = payload.get("period") or None
+                gain = payload.get("gain") or None
+                from_date = payload.get("fromDate") or None
+                to_date = payload.get("toDate") or None
+
+                query = QUERIES.get('advanced_search')
+
+                query_parameters = {
+                    "station_code": station_code,
+                    "pier": pier,
+                    "orientation": orientation,
+                    "period": period,
+                    "gain": gain,
+                    "from_date": from_date,
+                    "to_date": to_date
+                }
+
             # load env secrets
             neo_uri = self.env.NEO4J_URI
 
