@@ -46,6 +46,11 @@ jobs:
           cd docs
           make html
 
+      - name: Merge Vite Widget into Docs Build
+        run: |
+          mkdir -p docs/build/html/widget
+          cp -r web/dist/* docs/build/html/widget/
+
       - name: Upload artifact to Github pages
         uses: actions/upload-pages-artifact@v3
         with:
