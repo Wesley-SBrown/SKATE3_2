@@ -59,7 +59,7 @@ const filteredStations = computed(() => {
 const selectStation = (code) => {
   queryState.stationCode = code
   stationInput.value = code
-  showStationDropDown = false
+  showStationDropDown.value = false
 }
 
 const selectOption = (field, value) => {
