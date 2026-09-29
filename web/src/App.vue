@@ -25,7 +25,24 @@ const showJsonViewer = ref(false)
 const queryDuration = ref(null)
 
 const availableStations = ref([
-  'MWC', 'PAS', 'TIN', 'FTC', 'BBC', 'RVR', 'HAI'
+  'BAR', 'BBC', 'CLC', 'FTC', 'HAI', 'LJC', 'MWC', 'PAS', 'RVR', 'SBC', 'TIN', 'WDY' 
+])
+
+const availablePiers = ref([
+  'I', 'IA', 'IC', 'II', 'IIA', 'III', 'IIIA', 'IV', 
+  'V', 'VA', 'VI', 'VIA', 'VIB', 'RAD', 'EXP', 'SM'
+])
+
+const availableOrientations = ref([
+  'N', 'S', 'E', 'W', 'Z', 'NE', 'NZ', 'X'
+])
+
+const availablePeriods = ref([
+  'S', 'L', 'X'
+])
+
+const availableGains = ref([
+  'L', 'H', 'X'
 ])
 
 const stationInput = ref('')
@@ -42,6 +59,10 @@ const selectStation = (code) => {
   queryState.stationCode = code
   stationInput.value = code
   showStationDropDown = false
+}
+
+const selectOption = (field, value) => {
+  queryState[field] = value
 }
 
 // needed b/c issue with dropdowns getting messed up when option selected
@@ -229,20 +250,44 @@ const formatDateTime = (isoString) => {
           </div>
         </div>
 
-        <!-- Pier -->
+        <!-- Pier Dropdown-->
         <div class="form-group">
           <label>Pier</label>
-          <input type="text" v-model="queryState.pier" placeholder="i.e. I / IV"/>
+          <select v-model="queryState.pier" class="styled-select">
+            <option value="">All Piers</option>
+            <option v-for="pier in availablePiers" :key="pier">{{ pier }}</option>
+          </select>
         </div>
 
         <!--Orientation-->
         <div class="form-group">
           <label>Orientation</label>
-          <input type="text" v-model="queryState.orientation" placeholder="Z/N/E"/>          
+          <select v-model="queryState.orientation" class="styled-select">
+            <option value="">All Orientations</option>
+            <option v-for="orientation in availableOrientations" :key="orientation">{{ orientation }}</option>
+          </select>       
         </div>
       </div>
 
       <div class="form-row">
+        <!--Period-->
+        <div class="form-group">
+          <label>Period</label>
+          <select v-model="queryState.period" class="styled-select">
+            <option value="">All Periods</option>
+            <option v-for="period in availablePeriods" :key="period">{{ period }}</option>
+          </select>
+        </div>
+
+        <!--Gain-->
+        <div class="form-group">
+          <label>Gain</label>
+          <select v-model="queryState.gain" class="styled-select">
+            <option value="">All Gains</option>
+            <option v-for="gain in availableGains" :key="gain">{{ gain }}</option>
+          </select>
+        </div>
+
         <!--From Date-->
         <div class="form-group">
           <label>From Date</label>
@@ -255,17 +300,6 @@ const formatDateTime = (isoString) => {
           <input type="date" v-model="queryState.toDate" />
         </div>
 
-        <!--Period-->
-        <div class="form-group">
-          <label>Period</label>
-          <input type="text" v-model="queryState.period" placeholder="i.e. S/L"/>
-        </div>
-
-        <!--Gain-->
-        <div class="form-group">
-          <label>Gain</label>
-          <input type="text" v-model="queryState.gain" placeholder="i.e. L/H"/>
-        </div>
       </div>
 
       <div class="advanced-wrapper">
@@ -304,9 +338,9 @@ const formatDateTime = (isoString) => {
           <img :src="getThumbnailUrl(item)" alt="Thumbnail preview" loading="lazy" />
         </div>
         <div class="metadata">
-          <p><strong>Record:</strong> {{ item.record?.recordName }}</p>
-          <p><strong>Station:</strong> {{ item.record?.stationCode }}</p>
-          <p><strong>Date:</strong> {{ formatDateTime(item.record?.dateTime) }}</p>
+          <p><strong>Record:</strong> {{ (item.record || item.result?.record)?.recordName}}</p>
+          <p><strong>Station:</strong> {{ (item.record || item.result?.record)?.stationCode }}</p>
+          <p><strong>Date:</strong> {{ (item.record || item.result?.record)?.dateTime }}</p>
         </div>
       </div>
     </div>
@@ -464,7 +498,7 @@ body {
   font-weight: 500;
 }
 
-.form-group input {
+.form-group input, .styled-select {
   padding: 0.6rem 0.75rem;
   background-color: #0d1117;
   border: 1px solid #30363d;
@@ -475,7 +509,7 @@ body {
   box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input:focus, .styled-select:focus {
   outline: none;
   border-color: #58a6ff;
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
