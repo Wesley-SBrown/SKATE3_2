@@ -44,7 +44,7 @@ jobs:
       - name: Build Sphinx html
         run: |
           cd docs
-          make html
+          python3 -m sphinx.cmd.build -b html source build/html
 
       - name: Merge Vite Widget into Docs Build
         run: |
