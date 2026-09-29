@@ -23,6 +23,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const showJsonViewer = ref(false) 
 const queryDuration = ref(null)
+const selectedRecord = ref(null)
 
 const availableStations = ref([
   'BAR', 'BBC', 'CLC', 'FTC', 'HAI', 'LJC', 'MWC', 'PAS', 'RVR', 'SBC', 'TIN', 'WDY' 
@@ -63,6 +64,10 @@ const selectStation = (code) => {
 
 const selectOption = (field, value) => {
   queryState[field] = value
+}
+
+const getRecordData = (item) => {
+  return item.record || item.result?.record || {}
 }
 
 // needed b/c issue with dropdowns getting messed up when option selected
@@ -333,7 +338,8 @@ const formatDateTime = (isoString) => {
   
     <!---Results Grid with Thumbnails-->
     <div v-if="results.length > 0" class="results-grid">
-      <div v-for="(item,index) in results" :key="index" class="result-card">
+      <div v-for="(item,index) in results" :key="index" class="result-card clickable" 
+        @click="selectedRecord = item">
         <div class="img-container">
           <img :src="getThumbnailUrl(item)" alt="Thumbnail preview" loading="lazy" />
         </div>
@@ -341,6 +347,37 @@ const formatDateTime = (isoString) => {
           <p><strong>Record:</strong> {{ (item.record || item.result?.record)?.recordName}}</p>
           <p><strong>Station:</strong> {{ (item.record || item.result?.record)?.stationCode }}</p>
           <p><strong>Date:</strong> {{ (item.record || item.result?.record)?.dateTime }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!--Detailed Modal Overlay-->
+    <div v-if="selectedRecord" class="modal-backdrop" @click.self="selectedRecord = null">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Record Detailed View</h3>
+          <button class="close-btn" @click="selectedRecord = null">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-img-preview">
+            <img :src="getThumbnailUrl(selectedRecord)" alt="Full preview" />
+          </div>
+
+          <div class="modal-data-list">
+            <div class="data-item" v-for="(value,key) in getRecordData(selectedRecord)" :key="key">
+              <span class="data-key">{{ key }}:</span>
+              <span class="data-val">{{ key == 'dateTime' ? formatDateTime(value) : (value ?? 'N/A') }}</span>
+            </div>
+            <div class="data-item" v-if="selectedRecord.boxId">
+              <span class="data-key">boxId:</span>
+              <span class="data-val">{{ selectedRecord.boxId }}</span>
+            </div>
+            <div class="data-item" v-if="selectedRecord.boxNum">
+              <span class="data-key">boxNum:</span>
+              <span class="data-val">{{ selectedRecord.boxNum }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -705,4 +742,129 @@ body {
 .query-metric-footer strong {
   color: #58a6ff;
 }
+
+.result-card.clickable {
+  cursor: pointer;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  background: #1e2022;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 650px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  padding: 1.5rem;
+  color: #f0f6fc;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.close-btn:hover {
+  color: #f0f6fc;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-img-preview {
+  width: 100%;
+  height: 200px;
+  background: #0d1117;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-img-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.modal-data-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #161b22;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #30363d;
+}
+
+.data-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+  font-size: 0.9rem;
+}
+
+.data-item:last-child {
+  border-bottom: none;
+}
+
+.data-key {
+  color: #8b949e;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.data-val {
+  color: #58a6ff;
+  font-family: monospace;
+  word-break: break-all;
+  text-align: right;
+  max-width: 65%;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 </style>
