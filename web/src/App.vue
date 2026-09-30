@@ -91,8 +91,8 @@ const sendQuery = async () => {
       method : 'POST',
       headers : {
         'Content-Type' : 'application/json',
-        'CF-Access-Client-ID': import.meta.env.CF_ACCESS_CLIENT_ID,
-        'CF-Access-Client-Secret': import.meta.env.CF_ACCESS_CLIENT_SECRET
+        'CF-Access-Client-ID': import.meta.env.VITE_CF_ACCESS_CLIENT_ID,
+        'CF-Access-Client-Secret': import.meta.env.VITE_CF_ACCESS_SECRET
       },
       body : JSON.stringify(queryState)
     })
