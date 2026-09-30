@@ -26,6 +26,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
       
       - name: Build Vite Widget (Library Mode)
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           cd web
           npm ci
