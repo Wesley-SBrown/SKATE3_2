@@ -3,8 +3,9 @@
 Use the interactive tool below to query metadata from AuraDB and generate storage download scripts.
 
 ```{raw} html
-<div id="query-widget-root"></div>
-<link rel="stylesheet" href="_static/web/query-widget.css">
+<div id="query-widget-root" style="min-height: 400px;"></div>
+
+<link rel="stylesheet" href="_static/web/query-widget.css" />
 <script type="module">
   import { initQueryWidget } from './_static/web/query-widget.js';
   initQueryWidget('query-widget-root');

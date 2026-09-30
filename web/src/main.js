@@ -3,4 +3,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 
-createApp(App).mount('#query-widget-root')
+export function initQueryWidget(containerId) {
+  const app = createApp(App)
+  app.mount(`#${containerId}`)
+}
