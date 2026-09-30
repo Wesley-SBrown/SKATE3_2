@@ -4,6 +4,5 @@ version = "0.1.0"
 dependencies = [
     "pandas",
     "pillow",
-    "workers-runtime-sdk",
     "neo4j"
 ]
