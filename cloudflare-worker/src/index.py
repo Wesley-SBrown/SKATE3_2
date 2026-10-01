@@ -38,7 +38,7 @@ CORS_HEADERS = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, CF-Access-Client-ID, CF-Access-Client-Secret"
+    "Access-Control-Allow-Headers": "Content-Type"
 }
 
 class Default(WorkerEntrypoint):

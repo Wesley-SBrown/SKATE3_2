@@ -90,9 +90,7 @@ const sendQuery = async () => {
     const response = await fetch(CLOUDWATCH_WORKER_URL, {
       method : 'POST',
       headers : {
-        'Content-Type' : 'application/json',
-        'CF-Access-Client-ID': import.meta.env.VITE_CF_ACCESS_CLIENT_ID,
-        'CF-Access-Client-Secret': import.meta.env.VITE_CF_ACCESS_SECRET
+        'Content-Type' : 'application/json'
       },
       body : JSON.stringify(queryState)
     })

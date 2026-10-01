@@ -6,7 +6,7 @@ import vue from '@vitejs/plugin-vue'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineConfig({
-    base: '/SKATE3_2/widget/',
+    base: './',
     plugins: [
         vue(),
         nodePolyfills({
@@ -18,6 +18,9 @@ export default defineConfig({
             protocolImports: true,
         }),
     ],
+    server: {
+        port: 3000
+    },
     build: {
         lib: {
             entry: './src/main.js',
