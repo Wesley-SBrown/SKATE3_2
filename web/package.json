@@ -4,14 +4,17 @@
   "type": "module",
   "description": "AuraDB Interactive Control Panel",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build"
+    "dev:vue": "vite",
+    "dev:server": "python ../server/app.py",
+    "dev:docs": "cd ../docs && make html && python -m http.server --directory build/html 8000",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:docs\""
   },
   "dependencies": {
     "vue": "^3.4.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.4",
+    "concurrently": "^10.0.5",
     "vite": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.28.0"
   },
