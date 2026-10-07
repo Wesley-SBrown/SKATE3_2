@@ -127,7 +127,15 @@ const sendQuery = async () => {
 
 // retrieve thumbnail from gdrive storage
 const getThumbnailUrl = (item) => {
-  return '<googledrivelink/folder/image>'
+  const record = getRecordData(item)
+  const boxNum = item.boxNum || item.result?.boxNum || record.boxNum || 'unknown'
+  const recordName = record.recordName
+
+  if (!recordName) return ''
+
+  const serverUrl = import.meta.env.VITE_SMB_SERVER || 'http://127.0.0.1:5000'
+  
+  return `${serverUrl}/thumbnails/Box%20${boxNum}%20thumbnails/${recordName}_1280x720_q90.jpg`
 }
 
 // copy-to-clipboard & export operations
@@ -341,12 +349,17 @@ const formatDateTime = (isoString) => {
       <div v-for="(item,index) in results" :key="index" class="result-card clickable" 
         @click="selectedRecord = item">
         <div class="img-container">
-          <img :src="getThumbnailUrl(item)" alt="Thumbnail preview" loading="lazy" />
+          <img :src="getThumbnailUrl(item)" 
+            @error="handleMissingMount"
+            alt="Thumbnail preview" 
+            loading="lazy" 
+          />
         </div>
         <div class="metadata">
-          <p><strong>Record:</strong> {{ (item.record || item.result?.record)?.recordName}}</p>
-          <p><strong>Station:</strong> {{ (item.record || item.result?.record)?.stationCode }}</p>
-          <p><strong>Date:</strong> {{ (item.record || item.result?.record)?.dateTime }}</p>
+          <p><strong>Record:</strong> {{ getRecordData(item).recordName }}</p>
+          <p><strong>Station:</strong> {{ getRecordData(item).stationCode }}</p>
+          <p><strong>Date:</strong> {{ getRecordData(item).dateTime }}</p>
+          <p><strong>Box:</strong> {{ item.boxNum || item.result?.boxNum || 'N/A' }}</p>
         </div>
       </div>
     </div>
@@ -361,7 +374,10 @@ const formatDateTime = (isoString) => {
 
         <div class="modal-body">
           <div class="modal-img-preview">
-            <img :src="getThumbnailUrl(selectedRecord)" alt="Full preview" />
+            <img :src="getThumbnailUrl(selectedRecord)"
+              @error="handleMissingMount" 
+              alt="Full preview" 
+            />
           </div>
 
           <div class="modal-data-list">

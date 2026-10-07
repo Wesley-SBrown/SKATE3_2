@@ -50,6 +50,8 @@ QUERIES = {
           AND ($to_date IS NULL OR record.dateTime <= $to_date)
           
         RETURN {
+            boxNum: b.boxNum,
+            boxId: b.id,
             record: {
                 recordName: record.recordName,
                 stationCode: stCode,
