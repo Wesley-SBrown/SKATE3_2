@@ -29,7 +29,6 @@ QUERIES = {
         WHERE ($station_code IS NULL OR s.stationCode = $station_code)
           AND b.stationData IS NOT NULL
         
-        // Dynamically get keys or unfold station maps depending on whether station_code is set
         WITH b, 
              CASE 
                 WHEN $station_code IS NOT NULL THEN [$station_code]
@@ -41,7 +40,7 @@ QUERIES = {
         WHERE records IS NOT NULL
         
         UNWIND records AS record
-        WITH stCode, record
+        WITH b, stCode, record
         WHERE ($pier IS NULL OR record.pier = $pier)
           AND ($orientation IS NULL OR record.orientation = $orientation)
           AND ($period IS NULL OR record.period = $period)
