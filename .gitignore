@@ -33,3 +33,11 @@ box_cache/
 *.png
 *.xlsx
 *.csv
+
+# Caches
+.pytest_cache/
+.ruff_cache/
+
+# Worker-specific virtual environments
+.venv-workers/
+cloudflare-worker/.venv-workers/
