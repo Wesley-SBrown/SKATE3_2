@@ -6,6 +6,7 @@
     "datePublished": "2025-06-27",
     "name": "SKATE",
     "description": "This is an placeholder to remind us to update the codemeta.json file. This file is incomplete and has not been validated",
+    "author": [
         {
             "@type": "Person",
             "@id": "https://orcid.org/0000-0002-1021-3101",
