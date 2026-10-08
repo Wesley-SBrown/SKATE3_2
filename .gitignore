@@ -1,23 +1,35 @@
+# Python
+__pycache__/
 *.pyc
-out/*
-*.dat
-*.png
-node_modules
-**/.DS_Store
 .venv/
-__pycache__
-docs/build/
-docs/source/_static/
-src/*.egg-info/
+python_modules/
 *.egg-info/
+src/*.egg-info/
+
+# Node.js / JavaScript
+node_modules/
+
+# Build & Documentation Output
 build/
 dist/
-__pycache__/
-.vscode/
+out/*
+docs/build/
+docs/source/_static/
+
+# Environment Variables & Secrets
 .env
+.dev.vars
+
+# Cloud & Deployment (Wrangler)
+.wrangler/
+
+# IDEs & Operating Systems
+.vscode/
+**/.DS_Store
+
+# Data & Local Caches
+box_cache/
+*.dat
+*.png
 *.xlsx
 *.csv
-box_cache/
-.dev.vars
-.wrangler/
-python_modules/
