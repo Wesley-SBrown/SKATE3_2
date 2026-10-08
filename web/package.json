@@ -7,7 +7,7 @@
     "dev:vue": "vite",
     "dev:server": "python ../server/app.py",
     "dev:docs": "cd ../docs && make html && python -m http.server --directory build/html 8000",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:docs\"",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:docs\" \"echo Access at: http://localhost:8000/\"",
     "build": "vite build"
   },
   "dependencies": {
