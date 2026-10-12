@@ -63,11 +63,17 @@ class Default(WorkerEntrypoint):
             mode = payload.get('searchMode')
             if mode == 'station_date_range':
                 station_code = payload.get('stationCode')
-                if not station_code:
-                    return Response(json.dumps({"error":"Missing Station Code"}), status=400, headers=CORS_HEADERS)
+                if not station_code or not str(station_code).strip():
+                    return Response(
+                        json.dumps({
+                            "success": True, 
+                            "results": {"data": {"fields": ["EarliestDate", "LatestDate"], "values": []}}
+                        }), 
+                        headers=CORS_HEADERS
+                    )
                 query = QUERIES.bg_date_lookup
                 query_parameters = {"station_code": station_code}
-                
+
             elif mode == 'quick':
                 # query with record name only
                 record_name = payload.get("recordName", "")

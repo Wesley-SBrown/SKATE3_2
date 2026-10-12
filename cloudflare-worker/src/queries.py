@@ -67,7 +67,7 @@ QUERIES = {
 
     "bg_date_lookup" : """
         MATCH (b:Box) 
-        WHERE b.stationData IS NOT NULL
+        WHERE $station_code IS NOT NULL AND $station_code <> "" AND b.stationData IS NOT NULL
         WITH b, apoc.convert.fromJsonMap(b.stationData)[$station_code] AS records
         WHERE records IS NOT NULL
 

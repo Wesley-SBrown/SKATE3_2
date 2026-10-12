@@ -145,7 +145,11 @@ const formatDateForInput = (dateString) => {
 }
 
 const fetchStationDateRange = async (stationCode) => {
-  if (!stationCode) return 
+  if (!stationCode || !stationCode.trim()) {
+    queryState.fromDate = ''
+    queryState.toDate = ''
+    return
+  }
 
   try {
     const response = await fetch(CLOUDWATCH_WORKER_URL, {
