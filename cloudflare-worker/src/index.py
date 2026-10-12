@@ -61,7 +61,14 @@ class Default(WorkerEntrypoint):
             # TODO: maybe have a baseline where it creates a summary of the graph
 
             mode = payload.get('searchMode')
-            if mode == 'quick':
+            if mode == 'station_date_range':
+                station_code = payload.get('stationCode')
+                if not station_code:
+                    return Response(json.dumps({"error":"Missing Station Code"}), status=400, headers=CORS_HEADERS)
+                query = QUERIES.bg_date_lookup
+                query_parameters = {"station_code": station_code}
+                
+            elif mode == 'quick':
                 # query with record name only
                 record_name = payload.get("recordName", "")
 

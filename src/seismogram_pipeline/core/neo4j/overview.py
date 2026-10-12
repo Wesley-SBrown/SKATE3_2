@@ -1,8 +1,7 @@
 # src/seismogram_pipeline/core/neo4j/overview.py
 
-from dotenv import load_dotenv
-import os
 from neo4j import Driver
+from dotenv import load_dotenv
 
 from .connector import get_driver
 
@@ -26,12 +25,12 @@ def get_overview(driver: Driver) -> None:
 
     print("Nodes:")
     nodes_query = """
-    MATCH (n)
-    WITH labels(n) AS labels, keys(n) AS keys, n
-    UNWIND labels as label
-    UNWIND keys as key
-    RETURN label as Label, count(DISTINCT n) AS Count, collect(DISTINCT key) AS Properties
-    ORDER BY Count DESC
+        MATCH (n)
+        WITH labels(n) AS labels, keys(n) AS keys, n
+        UNWIND labels as label
+        UNWIND keys as key
+        RETURN label as Label, count(DISTINCT n) AS Count, collect(DISTINCT key) AS Properties
+        ORDER BY Count DESC
     """
 
     records, _, _ = driver.execute_query(nodes_query)
@@ -46,16 +45,16 @@ def get_overview(driver: Driver) -> None:
 
     print("\nRelationships:")
     relationships_query = """
-    MATCH (n)-[r]->()
-    WITH labels(n) as labels, type(r) as relType
-    UNWIND labels as label
-    RETURN label as Label, 'OUTGOING' as Direction, collect(DISTINCT relType) as Relationships
-    UNION
-    MATCH ()-[r]-(n)
-    WITH labels(n) as labels, type(r) as relType
-    UNWIND labels as label
-    RETURN label AS Label, 'INCOMING' as Direction, collect(DISTINCT relType) as Relationships
-    ORDER BY Label, Direction
+        MATCH (n)-[r]->()
+        WITH labels(n) as labels, type(r) as relType
+        UNWIND labels as label
+        RETURN label as Label, 'OUTGOING' as Direction, collect(DISTINCT relType) as Relationships
+        UNION
+        MATCH ()-[r]-(n)
+        WITH labels(n) as labels, type(r) as relType
+        UNWIND labels as label
+        RETURN label AS Label, 'INCOMING' as Direction, collect(DISTINCT relType) as Relationships
+        ORDER BY Label, Direction
     """
 
     records, _, _ = driver.execute_query(relationships_query)
@@ -73,9 +72,9 @@ def get_overview(driver: Driver) -> None:
 
     print("\nGlobal Relationship Frequencies:")
     global_rel_q = """
-    MATCH ()-[r]-()
-    RETURN type(r) AS Type, count(r) AS Count
-    ORDER BY Count DESC
+        MATCH ()-[r]-()
+        RETURN type(r) AS Type, count(r) AS Count
+        ORDER BY Count DESC
     """
 
     records, _, _ = driver.execute_query(global_rel_q)

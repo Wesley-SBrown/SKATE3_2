@@ -60,10 +60,24 @@ const selectStation = (code) => {
   queryState.stationCode = code
   stationInput.value = code
   showStationDropDown.value = false
+
+  fetchStationDateRange(code)
 }
 
 const selectOption = (field, value) => {
   queryState[field] = value
+}
+
+const clearFields = () => {
+  queryState.recordName = ''
+  queryState.stationCode = ''
+  queryState.fromDate = ''
+  queryState.toDate = ''
+  queryState.pier = ''
+  queryState.period = ''
+  queryState.gain = ''
+  queryState.orientation = ''
+  stationInput.value = ''
 }
 
 const getRecordData = (item) => {
@@ -122,6 +136,44 @@ const sendQuery = async () => {
     loading.value = false
     const endTime = performance.now()
     queryDuration.value = Math.round(endTime - startTime)
+  }
+}
+
+const formatDateForInput = (dateString) => {
+  if (!dateString) return ''
+  return dateString.split('T')[0]
+}
+
+const fetchStationDateRange = async (stationCode) => {
+  if (!stationCode) return 
+
+  try {
+    const response = await fetch(CLOUDWATCH_WORKER_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        searchMode: 'station_date_range',
+        stationCode: stationCode
+      })
+    })
+    if (!response.ok) return
+
+    const data = await response.json()
+
+    if (data.success && data.results?.data?.values?.length > 0) {
+      const row = data.results.data.values[0]
+      const fields = data.results.data.fields
+
+      const record = {}
+      fields.forEach((field,index) => {
+        record[field] = row[index]
+      })
+
+      queryState.fromDate = formatDateForInput(record.EarliestDate)
+      queryState.toDate = formatDateForInput(record.LatestDate)
+    }
+  } catch (err) {
+    console.error('Failed to fetch station date range:', err)
   }
 }
 
@@ -249,6 +301,7 @@ const formatDateTime = (isoString) => {
             @focus="showStationDropDown = true"
             @blur="handleBlur"
             @input="showStationDropDown = true; queryState.stationCode = stationInput"
+            @change="fetchStationDateRange(stationInput)"
             placeholder="Type or select station..."
           />
           <div v-if="showStationDropDown && filteredStations.length > 0" class="dropdown-list">
@@ -316,8 +369,11 @@ const formatDateTime = (isoString) => {
       </div>
 
       <div class="advanced-wrapper">
-        <button class="btn primary full width" @click="sendQuery" :disabled="loading">
+        <button class="btn primary full-width" @click="sendQuery" :disabled="loading">
           {{ loading ? 'Executing Advanced Query...' : 'Execute Structured Query' }}
+        </button>
+        <button class="btn secondary full-width" @click="clearFields" style="margin-top: 0.5rem;">
+          Clear Fields
         </button>
       </div>
     </div>

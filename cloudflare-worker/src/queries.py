@@ -63,5 +63,17 @@ QUERIES = {
         } AS result
         ORDER BY record.dateTime ASC
         LIMIT 100
+    """,
+
+    "bg_date_lookup" : """
+        MATCH (b:Box) 
+        WHERE b.stationData IS NOT NULL
+        WITH b, apoc.convert.fromJsonMap(b.stationData)[$station_code] AS records
+        WHERE records IS NOT NULL
+
+        UNWIND records AS record
+
+        RETURN  min(record.dateTime) AS EarliestDate,
+                max(record.dateTime) AS LatestDate
     """
 }
