@@ -71,7 +71,7 @@ class Default(WorkerEntrypoint):
                         }), 
                         headers=CORS_HEADERS
                     )
-                query = QUERIES.bg_date_lookup
+                query = QUERIES.get("bg_date_lookup")
                 query_parameters = {"station_code": station_code}
 
             elif mode == 'quick':
