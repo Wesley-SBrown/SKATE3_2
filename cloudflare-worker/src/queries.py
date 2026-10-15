@@ -2,7 +2,7 @@ QUERIES = {
     "optimal_record" : """
         MATCH (s:Station {stationCode: $station_code})<-[:CONTAINS_DATA_FOR]-(b:Box)
         WHERE b.fromDate <= $date + duration({months: coalesce($buffer, 0)})
-        AND b.throughDate >= $date - furation({months: coalesce($buffer, 0)})
+        AND b.throughDate >= $date - duration({months: coalesce($buffer, 0)})
         AND b.stationData CONTAINS $target_record_name
         WITH b, apoc.convert.fromJsonMap(b.stationData)[$station_code] AS records
         WHERE records IS NOT NULL
