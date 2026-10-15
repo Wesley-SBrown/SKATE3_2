@@ -7,7 +7,7 @@ import { ref, reactive, computed } from 'vue'
 
 // create state obj to contain query filters / parameters
 const queryState = reactive({
-    searchMode: 'quick', // 'quick' or 'advanced'
+    searchMode: 'quick', // 'quick', 'advanced', 'station_date_range'
     recordName: '', // single record name lookup
     stationCode: '', // selected or typed
     fromDate: '',
@@ -15,7 +15,8 @@ const queryState = reactive({
     pier: '',
     period: '',
     gain: '',
-    orientation: ''
+    orientation: '',
+    buffer: 0
 })
 
 const results = ref([])
@@ -274,23 +275,32 @@ const formatDateTime = (isoString) => {
     </div>
 
     <!---Input controls: Quick Search Mode-->
-    <div v-if="queryState.searchMode === 'quick'" class="controls">
-      <div class="input-wrapper">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input
-          v-model="queryState.recordName" 
-          type="text" 
-          placeholder="Enter record name (stem)" 
-          @keyup.enter="sendQuery"
-        />
+    <div v-if="queryState.searchMode === 'quick'" class="quick-controls">
+      <div class="quick-input-row">
+        <div class="form-group record-group">
+          <label>Record Name (Stem)</label>
+          <input
+            v-model="queryState.recordName" 
+            type="text" 
+            placeholder="Enter record name..." 
+            @keyup.enter="sendQuery"
+          />
+        </div>
+        <div class="form-group buffer-group">
+          <label>Buffer (Months)</label>
+          <input
+            v-model.number="queryState.buffer"
+            type="number"
+            placeholder="i.e., 3"
+            min="0"
+          />
+        </div>
       </div>
-      <button class="btn primary" @click="sendQuery" :disabled="loading">
-        {{ loading ? 'Executing...': 'Submit Query' }}
-      </button>
+      <div class="quick-submit-wrapper">
+        <button class="btn primary full-width" @click="sendQuery" :disabled="loading">
+          {{ loading ? 'Executing...' : 'Submit Query' }}
+        </button>
+      </div>
     </div>
 
     <!---Input Controls: Advanced Query Mode-->
@@ -543,39 +553,44 @@ body {
   font-weight: 500;
 }
 
-.controls {
+.quick-controls {
   display: flex;
-  gap: 0.75rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
   margin-bottom: 1.25rem;
+  background: #161b22;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #30363d;
 }
 
-.input-wrapper {
-  position: relative;
+.quick-input-row {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.record-group {
   flex: 1;
 }
 
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #8b949e;
+.buffer-group {
+  flex: 0 0 130px;
 }
 
-.controls input {
+.buffer-group input {
   width: 100%;
-  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+  padding: 0.6rem 0.75rem;
   background-color: #0d1117;
   border: 1px solid #30363d;
   color: #f0f6fc;
   border-radius: 6px;
   font-size: 0.9rem;
-  transition: all 0.2s ease;
   box-sizing: border-box;
 }
 
-.controls input:focus {
+.buffer-group input:focus {
   outline: none;
   border-color: #58a6ff;
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
@@ -657,10 +672,6 @@ body {
 .dropdown-item:hover {
   background: #21262d;
   color: #58a6ff;
-}
-
-.advanced-submit-wrapper {
-  margin-top: 0.5rem;
 }
 
 .full-width {
@@ -942,5 +953,4 @@ body {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
 </style>
