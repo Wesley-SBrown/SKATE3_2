@@ -20,15 +20,15 @@ def load_indiv_excel_sheet(
         
         input_path = (Path(__file__)
                     .resolve()
-                    .parents[2]
+                    .parents[4]
                     .joinpath("data/inputs")
                     ).joinpath(excel_filename)
     
     # define cols for sheet (may change per sheet)
-    cols = ['verified_by', 'box_count', 'box_num', 'stack_num', 'from_year',
+    cols = ['box_count', 'box_num', 'stack_num', 'from_year',
             'from_month', 'from_day', 'through_year', 'through_month', "through_day",
-            'exceptions', 'notes', 'comments', 'prev_no', 'image_name', 'scanned_date',
-            'scanned_by', 'checked_out', 'name'
+            'exceptions', 'notes', 'comments', 'prev_no', 'image_name', 'checked_out', 
+            'name', 'blank', 'scanned_date', 'scanned_by' 
             ]
 
     # define range of cols to select
@@ -139,9 +139,9 @@ def load_indiv_excel_sheet(
             "comments":row["comments"] if pd.notna(row["comments"]) else None,
             "imageName": row["image_name"] if pd.notna(row["image_name"]) else None,
             "checkedOut": row["checked_out"] if pd.notna(row["checked_out"]) else None,
-            "name": row["name"] if pd.notna(row["name"]) else None,
-            "scannedDate": row["scanned_date"] if pd.notna(row["scanned_date"]) else None,
-            "scannedBy": row["scanned_by"] if pd.notna(row["scanned_by"]) else None
+            "name": row.get("name") if pd.notna(row.get("name")) else None,
+            "scannedDate": row.get("scanned_date") if pd.notna(row.get("scanned_date")) else None,
+            "scannedBy": row.get("scanned_by") if pd.notna(row.get("scanned_by")) else None
         }
         clean_box_dict = {k: v for k, v in box_dict.items() if v is not None}
         box_data.append(clean_box_dict)
