@@ -31,6 +31,8 @@ docs/source/_static/
 box_cache/
 *.dat
 *.png
+*.jpg
+*.svg
 *.xlsx
 *.csv
 

@@ -338,23 +338,16 @@ const formatDateTime = (isoString) => {
             <option v-for="pier in availablePiers" :key="pier">{{ pier }}</option>
           </select>
         </div>
-
-        <!--Orientation-->
-        <div class="form-group">
-          <label>Orientation</label>
-          <select v-model="queryState.orientation" class="styled-select">
-            <option value="">All Orientations</option>
-            <option v-for="orientation in availableOrientations" :key="orientation">{{ orientation }}</option>
-          </select>       
+        <div>
         </div>
       </div>
 
       <div class="form-row">
         <!--Period-->
         <div class="form-group">
-          <label>Period</label>
+          <label>Band Code</label>
           <select v-model="queryState.period" class="styled-select">
-            <option value="">All Periods</option>
+            <option value="">All Bands</option>
             <option v-for="period in availablePeriods" :key="period">{{ period }}</option>
           </select>
         </div>
@@ -368,6 +361,17 @@ const formatDateTime = (isoString) => {
           </select>
         </div>
 
+        <!--Orientation-->
+        <div class="form-group">
+          <label>Orientation</label>
+          <select v-model="queryState.orientation" class="styled-select">
+            <option value="">All Orientations</option>
+            <option v-for="orientation in availableOrientations" :key="orientation">{{ orientation }}</option>
+          </select>       
+        </div>
+      </div>
+
+      <div class="form-row">
         <!--From Date-->
         <div class="form-group">
           <label>From Date</label>
@@ -379,7 +383,6 @@ const formatDateTime = (isoString) => {
           <label>Through Date</label>
           <input type="date" v-model="queryState.toDate" />
         </div>
-
       </div>
 
       <div class="advanced-wrapper">
