@@ -35,6 +35,7 @@ box_cache/
 *.svg
 *.xlsx
 *.csv
+*.pkl
 
 # Caches
 .pytest_cache/
