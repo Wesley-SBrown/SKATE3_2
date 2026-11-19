@@ -16,6 +16,19 @@ def save_box_locally(
     debug: bool = True,
     cache_dir: str = "./box_cache"
 ) -> None:
+    """
+    Accesses file server & parses metadata from files in specified box folder
+    Saves metadata as JSON to be uploaded to Neo4j
+
+    Parameters
+    ----------
+    box_filename : str
+        Box name to search file server for and download its metadata locally
+    debug : bool, default True
+        Boolean flag to turn on debug mode
+    cache_dir : str, default ./box_cache
+        Directory to save cached metadata to
+    """
     raw_data_path = verify_and_access_share()
     if not raw_data_path:
         return
@@ -133,7 +146,14 @@ def load_box_from_cache(
     cache_dir: str = "./box_cache"
 ) -> None:
     """
-    Uploaded cached record metadata to Neo4j instance 
+    Uploaded cached record metadata to Neo4j instance
+
+    Parameters
+    ----------
+    box_num : str or int
+        The box number to upload to Neo4j
+    cache_dir : str, default ./box_cache
+        Directory to pull metdata for the box from
     """
     cache_file = Path(cache_dir) / f"box_{box_num}_cache.json"
     if not cache_file.exists():
