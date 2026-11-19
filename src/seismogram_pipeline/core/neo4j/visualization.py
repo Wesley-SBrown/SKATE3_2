@@ -308,15 +308,28 @@ def build_schema_legend_html(
     """
 
 def export_html_to_png(
-    html_path: str,
-    png_path: str,
+    html_path: str, png_path: str,
     closeup_png_path: str | None = None,
-    width: int = 1280,
-    height: int = 720,
+    width: int = 1280, height: int = 720,
 ) -> None:
     """
-    
+    Simulates human interaction with the html file to position the view, take a screenshot,
+    then save it locally as a static image. 
+
+    Parameters
+    ----------
+    html_path : str
+        Path to saved html content created in previous steps
+    png_path : str
+        Path to save overview screenshot to
+    closeup_png_path : str, optional
+        If provided, zooms in on the defined region to save a close up screenshot
+    width : int, default 1280
+        Output width
+    height : int
+        Output height
     """
+    
     abs_html_path = f"file://{os.path.abspath(html_path)}"
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--enable-webgl", "--ignore-gpu-blocklist"])
