@@ -102,16 +102,23 @@ const sendQuery = async () => {
   const startTime = performance.now()
 
   try {
+    const payload = {
+      ...queryState,
+      recordName: queryState.recordName.trim(),
+      buffer: Number(queryState.buffer) || 0
+    }
+
     const response = await fetch(CLOUDWATCH_WORKER_URL, {
       method : 'POST',
       headers : {
         'Content-Type' : 'application/json'
       },
-      body : JSON.stringify(queryState)
+      body : JSON.stringify(payload)
     })
     
     if (!response.ok) {
-      throw new Error(`Server returned status ${response.status}`)
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Server returned status ${response.status}`)
     }
 
     const data = await response.json()
@@ -239,15 +246,21 @@ const downloadJsonAsFile = () => {
 
 const formatDateTime = (isoString) => {
   if (!isoString) return ''
-  const date = new Date(isoString)
-  return new Intl.DateTimeFormat('en-US', {
+  const str = String(isoString)
+  const hasTime = str.includes('T') || /\d{2}:\d{2}/.test(str)
+  const date = new Date(str)
+  const options = {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  }).format(date)
+    timeZone: 'UTC',
+    ...(hasTime && {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+  return new Intl.DateTimeFormat('en-US', options).format(date)
 }
 </script>
 

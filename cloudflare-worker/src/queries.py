@@ -1,8 +1,10 @@
 QUERIES = {
     "optimal_record" : """
         MATCH (s:Station {stationCode: $station_code})<-[:CONTAINS_DATA_FOR]-(b:Box)
-        WHERE b.fromDate <= $date + duration({months: coalesce($buffer, 0)})
-        AND b.throughDate >= $date - duration({months: coalesce($buffer, 0)})
+        WHERE ($date IS NULL OR $date = '' OR (
+            date(b.fromDate) <= date($date) + duration({months: toInteger(coalesce($buffer, 0))})
+            AND date(b.throughDate) >= date($date) - duration({months: toInteger(coalesce($buffer, 0))})
+        ))
         AND b.stationData CONTAINS $target_record_name
         WITH b, apoc.convert.fromJsonMap(b.stationData)[$station_code] AS records
         WHERE records IS NOT NULL
@@ -39,13 +41,13 @@ QUERIES = {
     "advanced_search": """
         MATCH (s:Station)<-[:CONTAINS_DATA_FOR]-(b:Box)
         WHERE ($station_code IS NULL OR s.stationCode = $station_code)
-          AND b.stationData IS NOT NULL
+            AND b.stationData IS NOT NULL
         
         WITH b, 
-             CASE 
+            CASE 
                 WHEN $station_code IS NOT NULL THEN [$station_code]
                 ELSE keys(apoc.convert.fromJsonMap(b.stationData))
-             END AS targetStations
+            END AS targetStations
         
         UNWIND targetStations AS stCode
         WITH b, stCode, apoc.convert.fromJsonMap(b.stationData)[stCode] AS records
@@ -54,11 +56,11 @@ QUERIES = {
         UNWIND records AS record
         WITH b, stCode, record
         WHERE ($pier IS NULL OR record.pier = $pier)
-          AND ($orientation IS NULL OR record.orientation = $orientation)
-          AND ($period IS NULL OR record.period = $period)
-          AND ($gain IS NULL OR record.gain = $gain)
-          AND ($from_date IS NULL OR record.dateTime >= $from_date)
-          AND ($to_date IS NULL OR record.dateTime <= $to_date)
+            AND ($orientation IS NULL OR record.orientation = $orientation)
+            AND ($period IS NULL OR record.period = $period)
+            AND ($gain IS NULL OR record.gain = $gain)
+            AND ($from_date IS NULL OR $from_date = '' OR date(record.dateTime) >= date($from_date))
+            AND ($to_date IS NULL OR $to_date = '' OR date(record.dateTime) <= date($to_date))
           
         RETURN {
             boxNum: b.boxNum,
